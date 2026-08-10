@@ -1,0 +1,953 @@
+/*
+  style.css — JT 방문자 관리 시스템 디자인 파일
+  다크모드 + 글래스모피즘 스타일
+  남건이 보기 쉽게 각 섹션에 한글 주석을 달았습니다!
+*/
+
+/* =========================================================
+   1. 구글 폰트 & 전역 CSS 변수(색상, 크기 등) 정의
+   ========================================================= */
+:root {
+  /* 배경 색상 */
+  --bg-start: #0a0f1e;
+  --bg-end: #0d1b2a;
+
+  /* 카드/유리 효과 색상 */
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-hover: rgba(255, 255, 255, 0.07);
+
+  /* 주요 포인트 색상 (파란색 계열) */
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --primary-light: rgba(59, 130, 246, 0.15);
+  --primary-glow: rgba(59, 130, 246, 0.3);
+
+  /* 강조 색상 (청록색) */
+  --accent: #06b6d4;
+  --accent-dark: #0891b2;
+  --accent-light: rgba(6, 182, 212, 0.15);
+
+  /* 성공/경고/위험 색상 */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.15);
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --danger-light: rgba(239, 68, 68, 0.15);
+
+  /* 텍스트 색상 */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* 테두리/구분선 색상 */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(59, 130, 246, 0.5);
+
+  /* 폰트 */
+  --font: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* 둥근 모서리 크기 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* 그림자 */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+
+  /* 전환 애니메이션 속도 */
+  --transition: 0.2s ease;
+  --transition-slow: 0.35s ease;
+}
+
+/* =========================================================
+   2. 브라우저 기본값 초기화 & 공통 설정
+   ========================================================= */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg-start);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* =========================================================
+   3. 배경 그라디언트 장식
+   ========================================================= */
+/* 화면 뒤에 퍼지는 은은한 빛 효과 */
+.bg-gradient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(59,130,246,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,0.06) 0%, transparent 60%),
+    linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+  pointer-events: none; /* 클릭 이벤트는 통과시킵니다 */
+}
+
+/* =========================================================
+   4. 앱 전체 레이아웃
+   ========================================================= */
+.app-wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;       /* 너무 넓어지지 않도록 최대 너비 제한 */
+  margin: 0 auto;         /* 화면 중앙 정렬 */
+  padding: 1.5rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: 100vh;
+}
+
+/* =========================================================
+   5. 상단 헤더
+   ========================================================= */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.logo-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 0 12px rgba(59,130,246,0.5));
+}
+
+.header-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  /* 텍스트에 그라디언트 색상을 입힙니다 */
+  background: linear-gradient(135deg, #60a5fa, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.header-time {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-feature-settings: "tnum"; /* 숫자 너비를 균일하게 */
+  text-align: right;
+}
+
+/* =========================================================
+   6. 탭 네비게이션
+   ========================================================= */
+.tab-nav {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 0.4rem;
+  backdrop-filter: blur(20px);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.5rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+/* 탭 버튼에 마우스를 올렸을 때 */
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--glass-hover);
+}
+
+/* 현재 선택된 탭 (활성 탭) */
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+.tab-icon {
+  font-size: 1rem;
+}
+
+/* 방문 기록 건수를 표시하는 작은 동그라미 배지 */
+.tab-badge {
+  background: rgba(255,255,255,0.25);
+  color: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* =========================================================
+   7. 탭 패널 (각 탭의 내용)
+   ========================================================= */
+.tab-panel {
+  display: none;         /* 기본은 숨김 */
+  animation: fadeSlideIn 0.3s ease; /* 탭 전환 시 부드럽게 나타나는 애니메이션 */
+}
+
+.tab-panel.active {
+  display: block;        /* 선택된 탭만 표시 */
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   8. 카드 (글래스모피즘 스타일)
+   ========================================================= */
+.card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.card-icon {
+  font-size: 1.2rem;
+}
+
+.card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   9. 폼 스타일 (입력 필드, 라벨 등)
+   ========================================================= */
+/* 2열 그리드 레이아웃 */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* 3열 그리드 레이아웃 (직원 추가 폼) */
+.form-grid-3 {
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+
+/* 각 입력 필드 묶음 */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* 라벨 텍스트 */
+.form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+/* 필수 입력 표시 (빨간 별표) */
+.required {
+  color: var(--danger);
+}
+
+/* 입력 필드 (input, select) */
+.form-input {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  transition: all var(--transition);
+  outline: none;
+}
+
+/* 입력 필드 안에 클릭할 때 (포커스 상태) */
+.form-input:focus {
+  border-color: var(--border-focus);
+  background: rgba(59, 130, 246, 0.06);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 플레이스홀더(안내 문구) 색상 */
+.form-input::placeholder {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* 드롭다운(select) 화살표 색상 */
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+/* 드롭다운 옵션의 배경 (어두운 배경에서도 읽히도록) */
+.form-select option {
+  background: #1e293b;
+  color: var(--text-primary);
+}
+
+/* datetime-local 입력 필드 달력 아이콘 색상 */
+.form-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
+/* 직원 추가 폼에서 버튼이 아래 정렬되도록 */
+.form-group-btn {
+  justify-content: flex-end;
+}
+
+/* 폼 구분선 */
+.visitor-form,
+.employee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* =========================================================
+   10. 버튼 스타일
+   ========================================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.25rem;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+/* 파란색 주요 버튼 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--primary-glow);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* 청록색 강조 버튼 */
+.btn-accent {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(6,182,212,0.3);
+}
+
+.btn-accent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(6,182,212,0.4);
+}
+
+/* 빨간색 위험 버튼 (삭제용) */
+.btn-danger {
+  background: linear-gradient(135deg, var(--danger), #dc2626);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(239,68,68,0.3);
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239,68,68,0.4);
+}
+
+/* 투명한 보조 버튼 */
+.btn-ghost {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  background: var(--glass-hover);
+  color: var(--text-primary);
+}
+
+/* 아이콘만 있는 작은 버튼 */
+.btn-icon-only {
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid rgba(239,68,68,0.2);
+  font-size: 0.85rem;
+  min-width: 34px;
+  min-height: 34px;
+}
+
+.btn-icon-only:hover {
+  background: rgba(239,68,68,0.25);
+}
+
+/* 버튼이 가득 찰 때 */
+.btn-full {
+  width: 100%;
+}
+
+/* 로딩 중 버튼 비활성화 스타일 */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* =========================================================
+   11. 검색 바
+   ========================================================= */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 0.9rem;
+  transition: all var(--transition);
+}
+
+.search-bar:focus-within {
+  border-color: var(--border-focus);
+  background: rgba(59,130,246,0.06);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+
+.search-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.75rem 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 0.9rem;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.3rem;
+  border-radius: 4px;
+  transition: all var(--transition);
+}
+
+.search-clear:hover {
+  color: var(--danger);
+  background: var(--danger-light);
+}
+
+/* =========================================================
+   12. 방문 기록 카드 목록
+   ========================================================= */
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* 각 방문 기록 카드 */
+.record-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: all var(--transition);
+  animation: fadeSlideIn 0.25s ease;
+}
+
+.record-card:hover {
+  background: var(--glass-hover);
+  border-color: rgba(255,255,255,0.12);
+  transform: translateX(3px);
+}
+
+/* 카드 왼쪽 색상 바 */
+.record-card::before {
+  content: '';
+  flex-shrink: 0;
+  width: 3px;
+  height: 100%;
+  min-height: 50px;
+  background: linear-gradient(180deg, var(--primary), var(--accent));
+  border-radius: 2px;
+}
+
+/* 카드 정보 영역 */
+.record-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.record-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* 회사명, 방문목적 등의 태그 그룹 */
+.record-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.record-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* 회사 태그 (파란색 계열) */
+.tag-company {
+  background: var(--primary-light);
+  color: #93c5fd;
+  border: 1px solid rgba(59,130,246,0.2);
+}
+
+/* 직원 태그 (초록색 계열) */
+.tag-employee {
+  background: var(--success-light);
+  color: #6ee7b7;
+  border: 1px solid rgba(16,185,129,0.2);
+}
+
+/* 방문목적 태그 (청록 계열) */
+.tag-purpose {
+  background: var(--accent-light);
+  color: #67e8f9;
+  border: 1px solid rgba(6,182,212,0.2);
+}
+
+/* 날짜/시간 */
+.record-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* 연락처 */
+.record-phone {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* 카드 오른쪽 삭제 버튼 */
+.record-actions {
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   13. 직원 목록
+   ========================================================= */
+.employees-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+/* 각 직원 카드 */
+.employee-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  transition: all var(--transition);
+  animation: fadeSlideIn 0.25s ease;
+}
+
+.employee-card:hover {
+  background: var(--glass-hover);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.employee-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.employee-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.employee-dept {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   14. 로딩 / 빈 상태 표시
+   ========================================================= */
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.empty-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* 회전하는 로딩 스피너 */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(59,130,246,0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =========================================================
+   15. 토스트 알림 (화면 오른쪽 하단 팝업)
+   ========================================================= */
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 500;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  animation: toastIn 0.3s ease;
+  max-width: 320px;
+}
+
+.toast-success {
+  background: rgba(16,185,129,0.9);
+  color: #fff;
+  border: 1px solid rgba(16,185,129,0.5);
+}
+
+.toast-error {
+  background: rgba(239,68,68,0.9);
+  color: #fff;
+  border: 1px solid rgba(239,68,68,0.5);
+}
+
+.toast-info {
+  background: rgba(59,130,246,0.9);
+  color: #fff;
+  border: 1px solid rgba(59,130,246,0.5);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOut {
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+/* =========================================================
+   16. 삭제 확인 모달
+   ========================================================= */
+/* 모달 뒤 어두운 배경 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 모달 박스 */
+.modal {
+  background: #1a2744;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.3s ease;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-icon {
+  font-size: 2.5rem;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.modal-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.modal-actions .btn {
+  flex: 1;
+}
+
+/* =========================================================
+   17. 하단 푸터
+   ========================================================= */
+.app-footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  padding-top: 0.5rem;
+}
+
+/* =========================================================
+   18. 반응형 디자인 (모바일 화면 최적화)
+   ========================================================= */
+@media (max-width: 640px) {
+  .app-wrapper {
+    padding: 1rem 0.75rem 2rem;
+    gap: 1rem;
+  }
+
+  /* 모바일에서 헤더 시간 숨김 */
+  .header-time {
+    display: none;
+  }
+
+  .header-title {
+    font-size: 1.1rem;
+  }
+
+  /* 탭 텍스트를 더 작게 */
+  .tab-btn {
+    font-size: 0.78rem;
+    padding: 0.6rem 0.3rem;
+  }
+
+  /* 폼을 1열로 변경 */
+  .form-grid,
+  .form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  /* 직원 카드를 1열로 */
+  .employees-list {
+    grid-template-columns: 1fr;
+  }
+
+  /* 방문 기록 카드 간소화 */
+  .record-card {
+    padding: 0.9rem 1rem;
+  }
+}
+
+/* =========================================================
+   19. 스크롤바 커스텀
+   ========================================================= */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.18);
+}
