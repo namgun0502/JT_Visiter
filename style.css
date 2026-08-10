@@ -166,80 +166,7 @@ body {
   text-align: right;
 }
 
-/* =========================================================
-   6. 탭 네비게이션
-   ========================================================= */
-.tab-nav {
-  display: flex;
-  gap: 0.5rem;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 0.4rem;
-  backdrop-filter: blur(20px);
-}
 
-.tab-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.65rem 0.5rem;
-  border: none;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font);
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-  white-space: nowrap;
-}
-
-/* 탭 버튼에 마우스를 올렸을 때 */
-.tab-btn:hover {
-  color: var(--text-primary);
-  background: var(--glass-hover);
-}
-
-/* 현재 선택된 탭 (활성 탭) */
-.tab-btn.active {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: #fff;
-  box-shadow: 0 4px 15px var(--primary-glow);
-}
-
-.tab-icon {
-  font-size: 1rem;
-}
-
-/* 방문 기록 건수를 표시하는 작은 동그라미 배지 */
-.tab-badge {
-  background: rgba(255,255,255,0.25);
-  color: inherit;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 20px;
-  min-width: 20px;
-  text-align: center;
-}
-
-/* =========================================================
-   7. 탭 패널 (각 탭의 내용)
-   ========================================================= */
-.tab-panel {
-  display: none;         /* 기본은 숨김 */
-  animation: fadeSlideIn 0.3s ease; /* 탭 전환 시 부드럽게 나타나는 애니메이션 */
-}
-
-.tab-panel.active {
-  display: block;        /* 선택된 탭만 표시 */
-}
-
-@keyframes fadeSlideIn {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -905,11 +832,6 @@ body {
     font-size: 1.1rem;
   }
 
-  /* 탭 텍스트를 더 작게 */
-  .tab-btn {
-    font-size: 0.78rem;
-    padding: 0.6rem 0.3rem;
-  }
 
   /* 폼을 1열로 변경 */
   .form-grid,

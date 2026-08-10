@@ -59,8 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 서명 패드를 초기화합니다
   initSignaturePads();
 
-  // Supabase에서 방문 기록과 직원 목록을 불러옵니다
-  loadRecords();
+  // Supabase에서 직원 목록을 불러옵니다 (안내자/승인자 드롭다운용)
   loadEmployees();
 });
 
@@ -101,25 +100,7 @@ function startClock() {
   setInterval(updateTime, 1000); // 1초마다 갱신
 }
 
-// =====================================================================
-// 6. 탭 전환 (방문자 등록 / 방문 기록 / 직원 관리)
-// =====================================================================
-function switchTab(tabName) {
-  // 모든 탭 패널과 버튼에서 active 클래스를 제거합니다
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    b.classList.remove('active');
-    b.setAttribute('aria-selected', 'false');
-  });
 
-  // 선택된 탭 패널과 버튼에 active 클래스를 추가합니다
-  document.getElementById(`tab-${tabName}`)?.classList.add('active');
-  const btn = document.getElementById(`tab-${tabName}-btn`);
-  if (btn) {
-    btn.classList.add('active');
-    btn.setAttribute('aria-selected', 'true');
-  }
-}
 
 // =====================================================================
 // 7. 서명 패드 초기화
@@ -429,7 +410,6 @@ async function handleSave() {
 
     showToast('✅ 방문자 등록이 완료되었습니다!', 'success');
     resetWizard();
-    loadRecords(); // 방문 기록 새로고침
   } catch (err) {
     console.error('저장 오류:', err);
     showToast('저장 중 오류가 발생했습니다: ' + err.message, 'error');
@@ -448,138 +428,13 @@ async function loadRecords() {
   const emptyEl   = document.getElementById('records-empty');
   const listEl    = document.getElementById('records-list');
 
-  // 로딩 상태 표시
-  loadingEl.style.display = 'flex';
-  emptyEl.style.display   = 'none';
-  listEl.innerHTML        = '';
 
-  try {
-    // Supabase에서 모든 방문 기록을 최신순으로 가져옵니다
-    const { data, error } = await db
-      .from('visitors')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    allRecords = data || [];
-    renderRecords(allRecords);
-  } catch (err) {
-    console.error('기록 불러오기 오류:', err);
-    showToast('기록을 불러오지 못했습니다.', 'error');
-    loadingEl.style.display = 'none';
-  }
-}
-
-// 방문 기록을 화면에 그리는 함수
-function renderRecords(records) {
-  const loadingEl = document.getElementById('records-loading');
-  const emptyEl   = document.getElementById('records-empty');
-  const listEl    = document.getElementById('records-list');
-  const badgeEl   = document.getElementById('records-badge');
-
-  loadingEl.style.display = 'none';
-
-  if (records.length === 0) {
-    emptyEl.style.display = 'flex';
-    listEl.innerHTML      = '';
-    if (badgeEl) badgeEl.textContent = '0';
-    return;
-  }
-
-  emptyEl.style.display = 'none';
-  if (badgeEl) badgeEl.textContent = allRecords.length;
-
-  // 각 기록을 카드 형태로 HTML 문자열로 만들어 한번에 삽입합니다
-  listEl.innerHTML = records.map(r => {
-    // 날짜와 시간 표시
-    const dateStr = r.visit_date
-      ? new Date(r.visit_date + 'T00:00:00').toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })
-      : '';
-    const timeStr = r.visit_time ? r.visit_time.substring(0, 5) : '';
-
-    // 적합/부적합 태그
-    const fitnessTag = r.fitness_status === '부적합'
-      ? `<span class="record-tag tag-fitness-ng">❌ ${r.fitness_status}</span>`
-      : `<span class="record-tag tag-fitness-ok">✅ ${r.fitness_status || '적합'}</span>`;
-
-    // 결재상태 태그
-    const approvalClass = r.approval_status === '승인' ? 'tag-fitness-ok'
-                        : r.approval_status === '반려' ? 'tag-fitness-ng'
-                        : 'tag-pending';
-    const approvalTag = `<span class="record-tag ${approvalClass}">📋 ${r.approval_status || '대기'}</span>`;
-
-    return `
-      <div class="record-card" id="record-${r.id}">
-        <div class="record-info">
-          <div class="record-name">${escapeHtml(r.visitor_name)}</div>
-          <div class="record-tags">
-            ${r.visitor_company ? `<span class="record-tag tag-company">🏢 ${escapeHtml(r.visitor_company)}</span>` : ''}
-            <span class="record-tag tag-purpose">🎯 ${escapeHtml(r.visit_purpose || '')}</span>
-            ${r.guide_name ? `<span class="record-tag tag-employee">👤 ${escapeHtml(r.guide_name)}</span>` : ''}
-            ${fitnessTag}
-            ${approvalTag}
-          </div>
-          <div class="record-date">📅 ${dateStr} ${timeStr}</div>
-          ${r.remarks ? `<div class="record-phone">📝 ${escapeHtml(r.remarks)}</div>` : ''}
-        </div>
-        <div class="record-actions">
-          <button
-            class="btn btn-icon-only"
-            title="삭제"
-            onclick="confirmDelete(${r.id}, 'visitor', '${escapeHtml(r.visitor_name)} 방문 기록')"
-          >🗑️</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
 
 // =====================================================================
-// 17. 방문 기록 검색
-// =====================================================================
-function handleSearch() {
-  const query = document.getElementById('search-input').value.trim().toLowerCase();
-  const clearBtn = document.getElementById('search-clear-btn');
-
-  // 검색어가 있으면 X 버튼 표시
-  clearBtn.style.display = query ? 'block' : 'none';
-
-  if (!query) {
-    renderRecords(allRecords);
-    return;
-  }
-
-  // 이름 또는 회사명 또는 방문목적으로 필터링
-  const filtered = allRecords.filter(r =>
-    (r.visitor_name    || '').toLowerCase().includes(query) ||
-    (r.visitor_company || '').toLowerCase().includes(query) ||
-    (r.visit_purpose   || '').toLowerCase().includes(query) ||
-    (r.guide_name      || '').toLowerCase().includes(query)
-  );
-  renderRecords(filtered);
-}
-
-function clearSearch() {
-  document.getElementById('search-input').value = '';
-  document.getElementById('search-clear-btn').style.display = 'none';
-  renderRecords(allRecords);
-}
-
-// =====================================================================
-// 18. 직원 목록 불러오기
+// 16. 직원 목록 불러오기 (드롭다운 연동용)
 // =====================================================================
 async function loadEmployees() {
-  const loadingEl = document.getElementById('employees-loading');
-  const emptyEl   = document.getElementById('employees-empty');
-  const listEl    = document.getElementById('employees-list');
-
-  loadingEl.style.display = 'flex';
-  emptyEl.style.display   = 'none';
-  listEl.innerHTML        = '';
-
   try {
-    // Supabase employees 테이블에서 이름 오름차순으로 가져옵니다
     const { data, error } = await db
       .from('employees')
       .select('*')
@@ -588,43 +443,11 @@ async function loadEmployees() {
     if (error) throw error;
 
     const employees = data || [];
-    renderEmployeeList(employees);
-
-    // Step 4의 드롭다운도 업데이트합니다
+    // Step 4의 드롭다운 업데이트
     updateEmployeeDropdowns(employees);
   } catch (err) {
     console.error('직원 불러오기 오류:', err);
-    loadingEl.style.display = 'none';
   }
-}
-
-// 직원 카드를 화면에 그리는 함수
-function renderEmployeeList(employees) {
-  const loadingEl = document.getElementById('employees-loading');
-  const emptyEl   = document.getElementById('employees-empty');
-  const listEl    = document.getElementById('employees-list');
-
-  loadingEl.style.display = 'none';
-
-  if (employees.length === 0) {
-    emptyEl.style.display = 'flex';
-    return;
-  }
-
-  emptyEl.style.display = 'none';
-  listEl.innerHTML = employees.map(e => `
-    <div class="employee-card" id="emp-${e.id}">
-      <div class="employee-info">
-        <div class="employee-name">👤 ${escapeHtml(e.name)}</div>
-        ${e.department ? `<div class="employee-dept">${escapeHtml(e.department)}</div>` : ''}
-      </div>
-      <button
-        class="btn btn-icon-only"
-        title="삭제"
-        onclick="confirmDelete(${e.id}, 'employee', '${escapeHtml(e.name)}')"
-      >🗑️</button>
-    </div>
-  `).join('');
 }
 
 // 직원 드롭다운(안내자, 승인자)을 직원 목록으로 채우는 함수
@@ -662,107 +485,7 @@ async function populateEmployeeDropdowns() {
   }
 }
 
-// =====================================================================
-// 19. 직원 추가
-// =====================================================================
-async function handleAddEmployee(event) {
-  event.preventDefault(); // 폼이 새로고침되는 것을 막습니다
 
-  const nameInput = document.getElementById('e-name');
-  const deptInput = document.getElementById('e-dept');
-  const addBtn    = document.getElementById('add-employee-btn');
-
-  const name = nameInput.value.trim();
-  const dept = deptInput.value.trim();
-
-  if (!name) {
-    showToast('직원 이름을 입력해 주세요.', 'error'); return;
-  }
-
-  addBtn.disabled = true;
-  addBtn.textContent = '추가 중...';
-
-  try {
-    const { error } = await db
-      .from('employees')
-      .insert([{ name, department: dept }]);
-
-    if (error) throw error;
-
-    showToast(`✅ ${name} 직원이 추가되었습니다!`, 'success');
-    nameInput.value = '';
-    deptInput.value = '';
-    loadEmployees(); // 직원 목록 새로고침
-  } catch (err) {
-    console.error('직원 추가 오류:', err);
-    showToast('직원 추가 중 오류가 발생했습니다.', 'error');
-  } finally {
-    addBtn.disabled = false;
-    addBtn.textContent = '+ 직원 추가';
-  }
-}
-
-// =====================================================================
-// 20. 삭제 확인 모달
-// =====================================================================
-function confirmDelete(id, type, label) {
-  pendingDeleteId   = id;
-  pendingDeleteType = type;
-
-  document.getElementById('modal-desc').textContent =
-    `"${label}"을(를) 삭제하면 복구할 수 없습니다.`;
-
-  const overlay = document.getElementById('modal-overlay');
-  overlay.style.display = 'flex';
-
-  // 확인 버튼 클릭 시 실제 삭제 실행
-  document.getElementById('modal-confirm-btn').onclick = executeDelete;
-}
-
-function closeModal() {
-  document.getElementById('modal-overlay').style.display = 'none';
-  pendingDeleteId   = null;
-  pendingDeleteType = null;
-}
-
-async function executeDelete() {
-  if (!pendingDeleteId || !pendingDeleteType) return;
-
-  const tableName = pendingDeleteType === 'visitor' ? 'visitors' : 'employees';
-  const cardId    = pendingDeleteType === 'visitor' ? `record-${pendingDeleteId}` : `emp-${pendingDeleteId}`;
-
-  closeModal();
-
-  try {
-    const { error } = await db
-      .from(tableName)
-      .delete()
-      .eq('id', pendingDeleteId);
-
-    if (error) throw error;
-
-    // 카드 요소를 화면에서 페이드 아웃 후 제거
-    const cardEl = document.getElementById(cardId);
-    if (cardEl) {
-      cardEl.style.transition = 'opacity 0.3s, transform 0.3s';
-      cardEl.style.opacity    = '0';
-      cardEl.style.transform  = 'translateX(-20px)';
-      setTimeout(() => cardEl.remove(), 300);
-    }
-
-    showToast('삭제되었습니다.', 'success');
-
-    // 전체 기록 목록도 업데이트
-    if (pendingDeleteType === 'visitor') {
-      allRecords = allRecords.filter(r => r.id !== pendingDeleteId);
-      const badgeEl = document.getElementById('records-badge');
-      if (badgeEl) badgeEl.textContent = allRecords.length;
-    }
-  } catch (err) {
-    console.error('삭제 오류:', err);
-    showToast('삭제 중 오류가 발생했습니다.', 'error');
-  }
-}
 
 // =====================================================================
 // 21. 토스트 알림 표시 (성공/오류 메시지 팝업)
