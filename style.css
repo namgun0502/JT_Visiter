@@ -951,3 +951,476 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,0.18);
 }
+
+/* =========================================================
+   20. 4단계 위자드 전용 스타일
+   ========================================================= */
+
+/* 위자드 카드는 내부 gap을 좀 더 줍니다 */
+.wizard-card {
+  gap: 2rem;
+}
+
+/* ── 프로그레스 바 ── */
+.wizard-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0.5rem 0 0.25rem;
+}
+
+/* 각 단계 원 + 라벨 묶음 */
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* 단계 번호 원 */
+.progress-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.07);
+  border: 2px solid rgba(255,255,255,0.15);
+  color: var(--text-muted);
+  transition: all 0.35s ease;
+}
+
+/* 활성화된 단계 원 */
+.progress-step.active .progress-circle {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 16px var(--primary-glow);
+}
+
+/* 완료된 단계 원 */
+.progress-step.done .progress-circle {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(16,185,129,0.4);
+}
+
+/* 단계 라벨 텍스트 */
+.progress-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  transition: color 0.35s ease;
+  white-space: nowrap;
+}
+
+.progress-step.active .progress-label {
+  color: var(--primary);
+}
+
+.progress-step.done .progress-label {
+  color: var(--success);
+}
+
+/* 단계 사이 연결선 */
+.progress-line {
+  flex: 1;
+  height: 2px;
+  background: rgba(255,255,255,0.1);
+  margin: 0 4px;
+  margin-bottom: 20px; /* 라벨 높이만큼 올려서 원 중간에 맞춤 */
+  transition: background 0.35s ease;
+}
+
+.progress-line.active {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+/* ── 위자드 단계 콘텐츠 ── */
+.wizard-step {
+  display: none;
+  flex-direction: column;
+  gap: 1.4rem;
+  animation: fadeSlideIn 0.3s ease;
+}
+
+.wizard-step.active {
+  display: flex;
+}
+
+/* 단계 헤더 */
+.step-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+}
+
+.step-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.step-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* ── 방문 목적 버튼 선택 ── */
+.purpose-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.purpose-btn {
+  padding: 0.6rem 1.2rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.purpose-btn:hover {
+  border-color: rgba(59,130,246,0.4);
+  color: var(--text-primary);
+  background: var(--primary-light);
+}
+
+/* 선택된 방문 목적 버튼 */
+.purpose-btn.selected {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+/* ── 건강 체크 / 준수사항 문항 ── */
+.health-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* 개별 문항 행 */
+.hq-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: background var(--transition);
+}
+
+.hq-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+/* 문항 텍스트 영역 */
+.hq-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* 문항 번호 원 */
+.hq-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: #60a5fa;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 예/아니오 버튼 묶음 */
+.yn-buttons {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* 예/아니오 버튼 공통 */
+.yn-btn {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1.5px solid transparent;
+}
+
+/* '예' 버튼 기본 */
+.yn-yes {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.2);
+  color: var(--danger);
+}
+
+.yn-yes:hover {
+  background: rgba(239,68,68,0.2);
+}
+
+/* '예' 버튼 선택됨 */
+.yn-yes.selected {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.4);
+}
+
+/* '아니오' 버튼 기본 */
+.yn-no {
+  background: rgba(16,185,129,0.1);
+  border-color: rgba(16,185,129,0.2);
+  color: var(--success);
+}
+
+.yn-no:hover {
+  background: rgba(16,185,129,0.2);
+}
+
+/* '아니오' 버튼 선택됨 */
+.yn-no.selected {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(16,185,129,0.4);
+}
+
+/* ── 동의 문구 박스 ── */
+.agreement-box {
+  background: var(--primary-light);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  font-size: 0.88rem;
+  color: #93c5fd;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── 서명 패드 ── */
+.signature-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.signature-canvas {
+  width: 100%;
+  height: 180px;
+  background: rgba(255,255,255,0.95);
+  border-radius: var(--radius-md);
+  border: 2px dashed rgba(255,255,255,0.3);
+  cursor: crosshair;
+  touch-action: none; /* 모바일에서 터치 서명 지원 */
+  display: block;
+}
+
+.signature-clear-btn {
+  align-self: flex-end;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.signature-clear-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-light);
+}
+
+/* ── 적합/부적합 버튼 ── */
+.fitness-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.fitness-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 2px solid transparent;
+}
+
+/* 적합 버튼 기본 */
+.fitness-ok {
+  background: rgba(16,185,129,0.1);
+  border-color: rgba(16,185,129,0.3);
+  color: var(--success);
+}
+
+.fitness-ok:hover, .fitness-ok.active {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.4);
+}
+
+/* 부적합 버튼 기본 */
+.fitness-ng {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.3);
+  color: var(--danger);
+}
+
+.fitness-ng:hover, .fitness-ng.active {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(239,68,68,0.4);
+}
+
+/* ── 결재 상태 배지 ── */
+.approval-badge-wrap {
+  padding: 0.55rem 0;
+}
+
+.approval-badge {
+  display: inline-block;
+  padding: 0.35rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.badge-pending {
+  background: rgba(245,158,11,0.15);
+  color: var(--warning);
+  border: 1px solid rgba(245,158,11,0.3);
+}
+
+.badge-approved {
+  background: var(--success-light);
+  color: var(--success);
+  border: 1px solid rgba(16,185,129,0.3);
+}
+
+.badge-rejected {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid rgba(239,68,68,0.3);
+}
+
+/* ── 위자드 하단 버튼 영역 ── */
+.wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
+}
+
+/* 텍스트 영역 (특이사항) */
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+/* ── 방문 기록 카드 - 추가 배지 ── */
+.tag-fitness-ok {
+  background: var(--success-light);
+  color: #6ee7b7;
+  border: 1px solid rgba(16,185,129,0.2);
+}
+
+.tag-fitness-ng {
+  background: var(--danger-light);
+  color: #fca5a5;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+.tag-pending {
+  background: rgba(245,158,11,0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(245,158,11,0.2);
+}
+
+/* 반응형: 모바일에서 위자드 조정 */
+@media (max-width: 640px) {
+  .progress-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+
+  .progress-label {
+    font-size: 0.62rem;
+  }
+
+  .hq-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .yn-buttons {
+    width: 100%;
+  }
+
+  .yn-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .purpose-buttons {
+    flex-direction: column;
+  }
+
+  .purpose-btn {
+    width: 100%;
+  }
+
+  .fitness-buttons {
+    flex-direction: column;
+  }
+
+  .wizard-actions {
+    flex-wrap: wrap;
+  }
+
+  .wizard-actions .btn {
+    flex: 1;
+    min-width: 80px;
+  }
+}

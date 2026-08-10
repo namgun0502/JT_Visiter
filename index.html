@@ -2,24 +2,27 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- 모바일 화면에서도 깨지지 않도록 뷰포트를 설정합니다 -->
+  <!-- 모바일에서도 화면이 잘 보이도록 뷰포트 설정 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- SEO: 검색엔진이 이 페이지를 인식하는 제목 -->
   <title>JT 방문자 관리 시스템</title>
-  <meta name="description" content="회사 외부 방문자 등록, 기록 조회, 직원 관리를 위한 방문자 관리 시스템" />
+  <meta name="description" content="JT 회사 외부 방문자 출입 등록, 위생 자가점검, 준수사항 동의, 안내자 확인을 포함한 방문자 관리 시스템" />
 
-  <!-- Google Fonts: 한국어에 최적화된 Noto Sans KR 폰트를 불러옵니다 -->
+  <!-- Google Fonts: 한국어에 최적화된 Noto Sans KR 폰트 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-  <!-- 우리가 만든 스타일시트를 불러옵니다 -->
+  <!-- 서명 패드 라이브러리 (마우스/터치로 서명 가능) -->
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+
+  <!-- 우리가 만든 스타일시트 -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ===================== 전체 화면 배경 ===================== -->
+  <!-- ===================== 전체 화면 그라디언트 배경 ===================== -->
   <div class="bg-gradient"></div>
 
   <!-- ===================== 앱 전체 감싸는 컨테이너 ===================== -->
@@ -49,7 +52,7 @@
         onclick="switchTab('register')"
       >
         <span class="tab-icon">📝</span>
-        <span>방문자 등록</span>
+        <span>방문자 출입기록</span>
       </button>
       <button
         class="tab-btn"
@@ -80,108 +83,341 @@
     <!-- ===== 메인 콘텐츠 영역 ===== -->
     <main class="app-main">
 
-      <!-- ───────────────────────────────────── -->
-      <!-- 탭 1: 방문자 등록 -->
-      <!-- ───────────────────────────────────── -->
+      <!-- ─────────────────────────────────────────── -->
+      <!-- 탭 1: 방문자 출입기록 (4단계 위자드) -->
+      <!-- ─────────────────────────────────────────── -->
       <section class="tab-panel active" id="tab-register" role="tabpanel" aria-labelledby="tab-register-btn">
-        <div class="card">
-          <div class="card-header">
-            <h2 class="card-title">
-              <span class="card-icon">📝</span> 방문자 등록
-            </h2>
-            <p class="card-desc">방문자 정보를 입력하고 등록 버튼을 눌러주세요.</p>
+        <div class="card wizard-card">
+
+          <!-- ── 프로그레스 바 (단계 표시기) ── -->
+          <div class="wizard-progress" id="wizard-progress">
+            <div class="progress-step active" id="prog-1">
+              <div class="progress-circle">1</div>
+              <span class="progress-label">기본정보</span>
+            </div>
+            <div class="progress-line" id="line-1-2"></div>
+            <div class="progress-step" id="prog-2">
+              <div class="progress-circle">2</div>
+              <span class="progress-label">건강확인</span>
+            </div>
+            <div class="progress-line" id="line-2-3"></div>
+            <div class="progress-step" id="prog-3">
+              <div class="progress-circle">3</div>
+              <span class="progress-label">준수동의</span>
+            </div>
+            <div class="progress-line" id="line-3-4"></div>
+            <div class="progress-step" id="prog-4">
+              <div class="progress-circle">4</div>
+              <span class="progress-label">안내자확인</span>
+            </div>
           </div>
 
-          <!-- 방문자 등록 폼 -->
-          <form id="visitor-form" class="visitor-form" onsubmit="handleRegister(event)" novalidate>
+          <!-- ════════════════════════════════════════════════ -->
+          <!--  STEP 1: 방문자 기본 정보                        -->
+          <!-- ════════════════════════════════════════════════ -->
+          <div class="wizard-step active" id="step-1">
+            <div class="step-header">
+              <h2 class="step-title">Step 1. 방문자 기본 정보</h2>
+              <p class="step-desc">방문자의 기본 정보와 방문 목적을 입력해 주세요.</p>
+            </div>
 
-            <!-- 2열 그리드: 이름 + 연락처 -->
+            <!-- 방문 일자 + 방문 시간 -->
             <div class="form-grid">
               <div class="form-group">
-                <label class="form-label" for="v-name">
+                <label class="form-label" for="s1-date">
+                  방문 일자 <span class="required">*</span>
+                </label>
+                <input type="date" id="s1-date" class="form-input" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="s1-time">
+                  방문 시간 <span class="required">*</span>
+                </label>
+                <input type="time" id="s1-time" class="form-input" required />
+              </div>
+            </div>
+
+            <!-- 방문자 이름 + 방문자 소속 -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="s1-name">
                   방문자 이름 <span class="required">*</span>
                 </label>
-                <input
-                  type="text"
-                  id="v-name"
-                  class="form-input"
-                  placeholder="홍길동"
-                  required
-                  maxlength="50"
-                />
+                <input type="text" id="s1-name" class="form-input" placeholder="홍길동" required maxlength="50" />
               </div>
               <div class="form-group">
-                <label class="form-label" for="v-phone">연락처</label>
-                <input
-                  type="tel"
-                  id="v-phone"
-                  class="form-input"
-                  placeholder="010-0000-0000"
-                  maxlength="20"
-                />
+                <label class="form-label" for="s1-company">방문자 소속</label>
+                <input type="text" id="s1-company" class="form-input" placeholder="ABC 주식회사" maxlength="100" />
               </div>
             </div>
 
-            <!-- 2열 그리드: 소속 회사 + 방문 목적 -->
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label" for="v-company">소속 회사</label>
-                <input
-                  type="text"
-                  id="v-company"
-                  class="form-input"
-                  placeholder="ABC 주식회사"
-                  maxlength="100"
-                />
+            <!-- 방문 목적 버튼 선택 -->
+            <div class="form-group">
+              <label class="form-label">
+                방문 목적 <span class="required">*</span>
+              </label>
+              <div class="purpose-buttons" id="purpose-buttons">
+                <button type="button" class="purpose-btn" data-value="시설견학" onclick="selectPurpose(this)">🏭 시설견학</button>
+                <button type="button" class="purpose-btn" data-value="설비보수" onclick="selectPurpose(this)">🔧 설비보수</button>
+                <button type="button" class="purpose-btn" data-value="업무협의" onclick="selectPurpose(this)">💼 업무협의</button>
+                <button type="button" class="purpose-btn" data-value="기타" onclick="selectPurpose(this)">📝 기타</button>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="v-purpose">방문 목적</label>
-                <input
-                  type="text"
-                  id="v-purpose"
-                  class="form-input"
-                  placeholder="업무 미팅, 납품, 면접 등"
-                  maxlength="100"
-                />
+              <!-- '기타' 선택 시에만 보이는 사유 입력란 -->
+              <div class="form-group" id="purpose-other-group" style="display:none; margin-top: 12px;">
+                <label class="form-label" for="s1-purpose-other">기타 사유 <span class="required">*</span></label>
+                <input type="text" id="s1-purpose-other" class="form-input" placeholder="방문 사유를 직접 입력해 주세요" maxlength="100" />
               </div>
             </div>
 
-            <!-- 2열 그리드: 방문 대상 직원 + 방문 일시 -->
+            <!-- Step 1 버튼 -->
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-ghost" onclick="cancelWizard()">✕ 취소</button>
+              <button type="button" class="btn btn-primary" onclick="goStep(2)" id="step1-next-btn">다음 →</button>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════════════════ -->
+          <!--  STEP 2: 방문자 위생 및 건강상태 자가점검         -->
+          <!-- ════════════════════════════════════════════════ -->
+          <div class="wizard-step" id="step-2">
+            <div class="step-header">
+              <h2 class="step-title">Step 2. 방문자 위생 및 건강상태 자가점검</h2>
+              <p class="step-desc">아래 항목에 솔직하게 답변해 주세요. (해당 항목에 예/아니오 선택)</p>
+            </div>
+
+            <!-- 건강 체크 문항들 -->
+            <div class="health-questions">
+              <!-- Q1 -->
+              <div class="hq-item" id="hq-1">
+                <div class="hq-text">
+                  <span class="hq-num">1</span>
+                  <span>최근 1주일 이내 감염병(감기, 장병 등)에 걸린 적이 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q1" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q1" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- Q2 -->
+              <div class="hq-item" id="hq-2">
+                <div class="hq-text">
+                  <span class="hq-num">2</span>
+                  <span>현재 위화감 증상(설사, 복통 등)이 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q2" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q2" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- Q3 -->
+              <div class="hq-item" id="hq-3">
+                <div class="hq-text">
+                  <span class="hq-num">3</span>
+                  <span>피부 질환(고름, 심한 피진 등)이 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q3" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q3" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- Q4 -->
+              <div class="hq-item" id="hq-4">
+                <div class="hq-text">
+                  <span class="hq-num">4</span>
+                  <span>위화감 식재료·식품에 접하고 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q4" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q4" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- Q5 -->
+              <div class="hq-item" id="hq-5">
+                <div class="hq-text">
+                  <span class="hq-num">5</span>
+                  <span>손락 상처가 있는 신체 부위를 반창고 또는 위생장갑 착용하고 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q5" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q5" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2 버튼 -->
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-ghost" onclick="goStep(1)">← 이전</button>
+              <button type="button" class="btn btn-ghost" onclick="cancelWizard()">✕ 취소</button>
+              <button type="button" class="btn btn-primary" onclick="goStep(3)">다음 →</button>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════════════════ -->
+          <!--  STEP 3: 준수사항 및 보안 동의                   -->
+          <!-- ════════════════════════════════════════════════ -->
+          <div class="wizard-step" id="step-3">
+            <div class="step-header">
+              <h2 class="step-title">Step 3. 준수사항 및 보안 동의</h2>
+              <p class="step-desc">아래 준수사항을 숙지하고 동의 여부를 선택해 주세요.</p>
+            </div>
+
+            <!-- 준수사항 문항들 -->
+            <div class="health-questions">
+              <!-- C1 -->
+              <div class="hq-item" id="cq-1">
+                <div class="hq-text">
+                  <span class="hq-num">1</span>
+                  <span>방문 목적 외 다른 구역에 무단으로 출입하지 않겠습니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q1" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q1" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- C2 -->
+              <div class="hq-item" id="cq-2">
+                <div class="hq-text">
+                  <span class="hq-num">2</span>
+                  <span>사내 기밀 정보 및 자료를 무단으로 촬영·복사·반출하지 않겠습니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q2" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q2" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- C3 -->
+              <div class="hq-item" id="cq-3">
+                <div class="hq-text">
+                  <span class="hq-num">3</span>
+                  <span>안내자의 지시에 따라 행동하겠습니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q3" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q3" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- C4 -->
+              <div class="hq-item" id="cq-4">
+                <div class="hq-text">
+                  <span class="hq-num">4</span>
+                  <span>개인 안전 보호구를 착용하겠습니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q4" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q4" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- C5 -->
+              <div class="hq-item" id="cq-5">
+                <div class="hq-text">
+                  <span class="hq-num">5</span>
+                  <span>방문 종료 후 안내자에게 퇴장을 고지하겠습니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q5" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q5" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 동의 문구 -->
+            <div class="agreement-box">
+              <p>본인은 위 수칙을 숙지하였으며, 이를 성실히 준수할 것을 확인합니다.</p>
+            </div>
+
+            <!-- 방문자 서명란 -->
+            <div class="form-group">
+              <label class="form-label">방문자 서명 <span class="required">*</span></label>
+              <div class="signature-container">
+                <canvas id="visitor-signature-canvas" class="signature-canvas"></canvas>
+                <button type="button" class="signature-clear-btn" onclick="clearSignature('visitor')">서명 지우기</button>
+              </div>
+            </div>
+
+            <!-- Step 3 버튼 -->
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-ghost" onclick="goStep(2)">← 이전</button>
+              <button type="button" class="btn btn-ghost" onclick="cancelWizard()">✕ 취소</button>
+              <button type="button" class="btn btn-primary" onclick="goStep(4)">다음 →</button>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════════════════ -->
+          <!--  STEP 4: 안내자 확인                            -->
+          <!-- ════════════════════════════════════════════════ -->
+          <div class="wizard-step" id="step-4">
+            <div class="step-header">
+              <h2 class="step-title">Step 4. 안내자 확인</h2>
+              <p class="step-desc">안내자가 방문자 정보를 최종 확인하고 서명합니다.</p>
+            </div>
+
+            <!-- 적합 여부 버튼 -->
+            <div class="form-group">
+              <label class="form-label">적합 여부 <span class="required">*</span></label>
+              <div class="fitness-buttons" id="fitness-buttons">
+                <button type="button" class="fitness-btn fitness-ok active" data-value="적합" onclick="selectFitness(this)">✅ 적합</button>
+                <button type="button" class="fitness-btn fitness-ng" data-value="부적합" onclick="selectFitness(this)">❌ 부적합</button>
+              </div>
+            </div>
+
+            <!-- 안내자 이름 드롭다운 -->
+            <div class="form-group">
+              <label class="form-label" for="s4-guide">
+                안내자 이름 <span class="required">*</span>
+              </label>
+              <select id="s4-guide" class="form-input form-select" required>
+                <option value="">안내자를 선택하세요</option>
+              </select>
+            </div>
+
+            <!-- 안내자 서명란 -->
+            <div class="form-group">
+              <label class="form-label">안내자 서명 <span class="required">*</span></label>
+              <div class="signature-container">
+                <canvas id="guide-signature-canvas" class="signature-canvas"></canvas>
+                <button type="button" class="signature-clear-btn" onclick="clearSignature('guide')">서명 지우기</button>
+              </div>
+            </div>
+
+            <!-- 특이사항 -->
+            <div class="form-group">
+              <label class="form-label" for="s4-remarks">특이사항</label>
+              <textarea id="s4-remarks" class="form-input form-textarea" placeholder="특이사항이 있으면 입력해 주세요" maxlength="500"></textarea>
+            </div>
+
+            <!-- 결재 정보 -->
             <div class="form-grid">
               <div class="form-group">
-                <label class="form-label" for="v-employee">
-                  방문 대상 직원 <span class="required">*</span>
-                </label>
-                <!-- 직원 목록에서 선택하는 드롭다운 -->
-                <select id="v-employee" class="form-input form-select" required>
-                  <option value="">직원을 선택하세요</option>
+                <label class="form-label">결재 상태</label>
+                <!-- 결재 상태 배지: 기본값 '대기' -->
+                <div class="approval-badge-wrap">
+                  <span class="approval-badge badge-pending" id="approval-status-badge">대기</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="s4-approver">결재 승인자</label>
+                <select id="s4-approver" class="form-input form-select">
+                  <option value="">승인자를 선택하세요</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="v-date">
-                  방문 일시 <span class="required">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  id="v-date"
-                  class="form-input"
-                  required
-                />
-              </div>
             </div>
 
-            <!-- 등록 버튼 -->
-            <button type="submit" class="btn btn-primary btn-full" id="register-btn">
-              <span class="btn-icon">✅</span>
-              <span class="btn-text">방문자 등록</span>
-            </button>
-          </form>
-        </div>
+            <!-- Step 4 버튼 -->
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-ghost" onclick="goStep(3)">← 이전</button>
+              <button type="button" class="btn btn-ghost" onclick="cancelWizard()">✕ 취소</button>
+              <button type="button" class="btn btn-primary" id="save-btn" onclick="handleSave()">
+                <span>💾 저장</span>
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /wizard-card -->
       </section>
 
-      <!-- ───────────────────────────────────── -->
+      <!-- ─────────────────────────────────────────── -->
       <!-- 탭 2: 방문 기록 -->
-      <!-- ───────────────────────────────────── -->
+      <!-- ─────────────────────────────────────────── -->
       <section class="tab-panel" id="tab-records" role="tabpanel" aria-labelledby="tab-records-btn">
         <div class="card">
           <div class="card-header">
@@ -198,42 +434,38 @@
               type="text"
               id="search-input"
               class="search-input"
-              placeholder="방문자 이름, 회사명, 직원명으로 검색..."
+              placeholder="방문자 이름, 회사명으로 검색..."
               oninput="handleSearch()"
             />
-            <!-- 검색어 지우기 버튼 -->
             <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" style="display:none;">✕</button>
           </div>
 
           <!-- 기록 목록이 들어갈 공간 -->
           <div id="records-container">
-            <!-- 로딩 중 표시 -->
             <div class="loading-state" id="records-loading">
               <div class="spinner"></div>
               <p>기록을 불러오는 중...</p>
             </div>
-            <!-- 기록이 없을 때 표시 -->
             <div class="empty-state" id="records-empty" style="display:none;">
               <span class="empty-icon">📭</span>
               <p>아직 등록된 방문 기록이 없습니다.</p>
-              <p class="empty-sub">방문자 등록 탭에서 방문자를 추가해 보세요!</p>
+              <p class="empty-sub">방문자 출입기록 탭에서 등록해 보세요!</p>
             </div>
-            <!-- 실제 기록 카드들이 여기에 추가됩니다 -->
             <div class="records-list" id="records-list"></div>
           </div>
         </div>
       </section>
 
-      <!-- ───────────────────────────────────── -->
+      <!-- ─────────────────────────────────────────── -->
       <!-- 탭 3: 직원 관리 -->
-      <!-- ───────────────────────────────────── -->
+      <!-- ─────────────────────────────────────────── -->
       <section class="tab-panel" id="tab-employees" role="tabpanel" aria-labelledby="tab-employees-btn">
         <div class="card">
           <div class="card-header">
             <h2 class="card-title">
               <span class="card-icon">👥</span> 직원 관리
             </h2>
-            <p class="card-desc">방문 대상 직원 목록을 관리합니다.</p>
+            <p class="card-desc">안내자 및 결재 승인자 목록을 관리합니다.</p>
           </div>
 
           <!-- 직원 추가 폼 -->
