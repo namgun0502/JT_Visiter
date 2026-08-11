@@ -423,10 +423,14 @@
                 <p class="card-desc">안내자 또는 승인자로 사용할 직원을 등록합니다.</p>
               </div>
               <form id="employee-add-form" class="employee-form" onsubmit="handleAddEmployee(event)" novalidate>
-                <div class="form-grid form-grid-3">
+                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:1rem;">
                   <div class="form-group">
                     <label class="form-label" for="e-name">이름 <span class="required">*</span></label>
                     <input type="text" id="e-name" class="form-input" placeholder="홍길동" required maxlength="50" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="e-title">직함 (선택)</label>
+                    <input type="text" id="e-title" class="form-input" placeholder="대리" maxlength="30" />
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="e-dept-select">부서 (선택)</label>
@@ -549,6 +553,46 @@
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeAdminPasswordModal()">취소</button>
         <button class="btn btn-primary" onclick="submitAdminPassword()">🔓 확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 직원 정보 수정 모달 -->
+  <div class="modal-overlay" id="edit-employee-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ 직원 정보 수정</h3>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-employee-form" class="employee-form" onsubmit="submitEditEmployee(event)">
+          <input type="hidden" id="edit-e-id" />
+          <div class="form-group">
+            <label class="form-label" for="edit-e-name">이름 <span class="required">*</span></label>
+            <input type="text" id="edit-e-name" class="form-input" required maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-e-title">직함 (선택)</label>
+            <input type="text" id="edit-e-title" class="form-input" maxlength="30" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-e-dept">부서 (선택)</label>
+            <!-- 수정 창에서는 직접 입력 칸으로 제공 -->
+            <input type="text" id="edit-e-dept" class="form-input" maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-e-role">역할 <span class="required">*</span></label>
+            <select id="edit-e-role" class="form-input form-select">
+              <option value="안내자">가이드(안내자)</option>
+              <option value="승인자">승인자</option>
+              <option value="안내자+승인자">가이드+승인자 (겸직)</option>
+            </select>
+          </div>
+          <div class="modal-actions" style="margin-top:1.5rem;">
+            <button type="button" class="btn btn-ghost" onclick="closeEditModal()">취소</button>
+            <button type="submit" class="btn btn-primary" id="submit-edit-btn">저장</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

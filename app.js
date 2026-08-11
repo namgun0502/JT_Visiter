@@ -509,7 +509,15 @@ function updateEmployeeDropdowns(employees) {
     list.forEach(e => {
       const opt = document.createElement('option');
       opt.value = e.name;
-      opt.textContent = e.department ? `${e.name} (${e.department})` : e.name;
+      let display = e.name;
+      if (e.department) {
+        display += ` (${e.department}`;
+        if (e.title) display += ` ${e.title}`;
+        display += `)`;
+      } else if (e.title) {
+        display += ` (${e.title})`;
+      }
+      opt.textContent = display;
       select.appendChild(opt);
     });
     if (currentVal) select.value = currentVal;
@@ -865,14 +873,20 @@ async function loadAdminEmployees() {
         card.className = 'employee-card';
         card.innerHTML = `
           <div class="employee-info">
-            <div class="employee-name">${escapeHtml(emp.name)}</div>
+            <div class="employee-name">${escapeHtml(emp.name)} <span style="font-size:0.85rem; color:var(--text-muted); font-weight:normal;">${emp.title ? escapeHtml(emp.title) : ''}</span></div>
             <div class="employee-dept">${emp.department ? escapeHtml(emp.department) : '부서 없음'}</div>
             <span class="role-badge ${badgeClass}">${badgeIcon} ${role}</span>
           </div>
-          <button class="btn btn-ghost" style="flex-shrink:0; font-size:0.8rem; padding:0.4rem 0.75rem; color:var(--danger);"
-            onclick="handleDeleteEmployee('${emp.id}', '${escapeHtml(emp.name)}')">
-            🗑️ 삭제
-          </button>
+          <div style="display:flex; flex-direction:column; gap:0.25rem;">
+            <button class="btn btn-ghost" style="flex-shrink:0; font-size:0.8rem; padding:0.4rem 0.5rem; color:var(--text-secondary);"
+              onclick="openEditModal('${emp.id}', '${escapeHtml(emp.name).replace(/'/g, "\\'")}', '${emp.department ? escapeHtml(emp.department).replace(/'/g, "\\'") : ''}', '${emp.title ? escapeHtml(emp.title).replace(/'/g, "\\'") : ''}', '${role}')">
+              ✏️ 수정
+            </button>
+            <button class="btn btn-ghost" style="flex-shrink:0; font-size:0.8rem; padding:0.4rem 0.5rem; color:var(--danger);"
+              onclick="handleDeleteEmployee('${emp.id}', '${escapeHtml(emp.name).replace(/'/g, "\\'")}')">
+              🗑️ 삭제
+            </button>
+          </div>
         `;
         list.appendChild(card);
       });
@@ -908,6 +922,7 @@ async function handleAddEmployee(event) {
   event.preventDefault();
 
   const name = document.getElementById('e-name')?.value.trim();
+  const title = document.getElementById('e-title')?.value.trim() || null;
   
   // 부서 처리: select 값이 'direct'면 input에서 가져오고, 아니면 select 값 사용
   const deptSelectVal = document.getElementById('e-dept-select')?.value;
@@ -943,7 +958,7 @@ async function handleAddEmployee(event) {
         // 이미 겸직이거나 새 역할이 겸직이면 그냥 겸직으로 업데이트
         const { error: updateError } = await db
           .from('employees')
-          .update({ role: '안내자+승인자', department: dept || existingEmp.department })
+          .update({ role: '안내자+승인자', department: dept || existingEmp.department, title: title || existingEmp.title })
           .eq('id', existingEmp.id);
         if (updateError) throw updateError;
         showToast(`ℹ️ [${name}] 님은 이미 등록되어 겸직(안내자+승인자)으로 통합되었습니다.`, 'success');
@@ -952,7 +967,7 @@ async function handleAddEmployee(event) {
         // 기존 역할과 새 역할이 다르면 (안내자 vs 승인자) -> 겸직으로 승급
         const { error: updateError } = await db
           .from('employees')
-          .update({ role: '안내자+승인자', department: dept || existingEmp.department })
+          .update({ role: '안내자+승인자', department: dept || existingEmp.department, title: title || existingEmp.title })
           .eq('id', existingEmp.id);
         if (updateError) throw updateError;
         showToast(`🎉 [${name}] 님이 안내자+승인자로 승급(병합)되었습니다!`, 'success');
@@ -964,13 +979,14 @@ async function handleAddEmployee(event) {
       }
     } else {
       // 3. 없는 경우: 새로 인서트
-      const { error: insertError } = await db.from('employees').insert([{ name, department: dept || null, role }]);
+      const { error: insertError } = await db.from('employees').insert([{ name, department: dept || null, title: title || null, role }]);
       if (insertError) throw insertError;
       showToast(`✅ ${name} (${role}) 직원이 신규 등록되었습니다!`, 'success');
     }
 
     // 성공 시 공통 처리 (폼 초기화 및 목록 갱신)
     document.getElementById('e-name').value = '';
+    document.getElementById('e-title').value = '';
     const deptSelect = document.getElementById('e-dept-select');
     if (deptSelect) deptSelect.value = '';
     const deptInput = document.getElementById('e-dept-input');
@@ -1033,5 +1049,60 @@ function toggleDeptInput() {
       input.style.display = 'none';
       input.value = '';
     }
+  }
+}
+
+// ── 관리자 탭: 직원 정보 수정 모달 열기 ──
+function openEditModal(id, name, dept, title, role) {
+  const modal = document.getElementById('edit-employee-modal');
+  if (!modal) return;
+  
+  document.getElementById('edit-e-id').value = id;
+  document.getElementById('edit-e-name').value = name;
+  document.getElementById('edit-e-dept').value = dept;
+  document.getElementById('edit-e-title').value = title;
+  document.getElementById('edit-e-role').value = role;
+  
+  modal.style.display = 'flex';
+}
+
+// ── 관리자 탭: 직원 정보 수정 모달 닫기 ──
+function closeEditModal() {
+  const modal = document.getElementById('edit-employee-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+// ── 관리자 탭: 직원 정보 수정 제출 ──
+async function submitEditEmployee(event) {
+  event.preventDefault();
+  
+  const id = document.getElementById('edit-e-id')?.value;
+  const name = document.getElementById('edit-e-name')?.value.trim();
+  const dept = document.getElementById('edit-e-dept')?.value.trim() || null;
+  const title = document.getElementById('edit-e-title')?.value.trim() || null;
+  const role = document.getElementById('edit-e-role')?.value;
+  
+  if (!id || !name) return;
+  
+  const btn = document.getElementById('submit-edit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+  
+  try {
+    const { error } = await db
+      .from('employees')
+      .update({ name, department: dept, title, role })
+      .eq('id', id);
+      
+    if (error) throw error;
+    
+    showToast(`✅ [${name}] 직원 정보가 수정되었습니다.`, 'success');
+    closeEditModal();
+    loadAdminEmployees();
+    loadEmployees(); // 드롭다운 갱신
+  } catch (err) {
+    console.error('직원 수정 오류:', err);
+    showToast('직원 정보를 수정하는 중 오류가 발생했습니다.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '저장'; }
   }
 }
