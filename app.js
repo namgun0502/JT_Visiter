@@ -145,12 +145,15 @@ function switchTab(tabId) {
   if (tabId === 'approval') {
     loadPendingApprovals();
   }
+  if (tabId === 'archive') {
+    loadArchiveApprovals();
+  }
   if (tabId === 'admin') {
     loadAdminEmployees();
   }
 
   // 페이지 제목 변경
-  const titles = { register: '방문자 등록', approval: '결재 승인', admin: '관리자' };
+  const titles = { register: '방문자 등록', approval: '결재 승인 대기열', archive: '적합/부적합 보관함', admin: '관리자' };
   const pageTitle = document.getElementById('page-title');
   if (pageTitle) pageTitle.textContent = titles[tabId] || '';
 }
@@ -701,6 +704,81 @@ async function loadPendingApprovals() {
   }
 }
 
+// 보관함 목록 로드 (승인 또는 반려된 건들)
+async function loadArchiveApprovals() {
+  const loading = document.getElementById('archive-loading');
+  const empty = document.getElementById('archive-empty');
+  const list = document.getElementById('archive-list');
+
+  if (!loading || !empty || !list) return;
+
+  loading.style.display = 'flex';
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  try {
+    const { data, error } = await db
+      .from('visitors')
+      .select('*')
+      .neq('approval_status', '대기')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (data.length === 0) {
+      empty.style.display = 'flex';
+    } else {
+      data.forEach(record => {
+        // 결재 권한 여부 확인 (상태 수정 버튼 표시에 사용)
+        const canApprove = currentUser &&
+          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+
+        const isApproved = record.approval_status === '승인';
+        const statusTag = isApproved 
+          ? `<span class="tag tag-approved" style="background:#d1fae5; color:#065f46; border:1px solid #10b981;">적합(승인)</span>` 
+          : `<span class="tag tag-rejected" style="background:#fee2e2; color:#991b1b; border:1px solid #ef4444;">부적합(반려)</span>`;
+
+        const card = document.createElement('div');
+        card.className = 'record-card';
+        card.innerHTML = `
+          <div class="record-header">
+            <h3 class="record-name">${record.visitor_name || record.name || '이름 없음'} ${statusTag}</h3>
+            <span class="record-date">${record.visit_date} ${record.visit_time || ''}</span>
+          </div>
+          <div class="record-body">
+            <p><strong>회사:</strong> ${record.visitor_company || record.company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || record.purpose || ''}</p>
+            <p><strong>안내자:</strong> ${record.guide_name || '미지정'}</p>
+          </div>
+          <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
+            <!-- 상세보기 (수정 불가능한 보기 모드) -->
+            <button class="btn btn-ghost" style="flex:1; min-width:120px;"
+              onclick="showApprovalDetail('${record.id}', 'view')">
+              🔍 상세 보기
+            </button>
+            <!-- 상태 수정 (권한이 있는 사람만) -->
+            ${canApprove
+              ? `<button class="btn btn-secondary" style="flex:1; min-width:120px;"
+                  onclick="showApprovalDetail('${record.id}', 'edit')">
+                  ✏️ 상태 변경
+                </button>`
+              : `<button class="btn btn-ghost" style="flex:1; min-width:120px; opacity:0.45; cursor:not-allowed;"
+                  title="상태 변경은 승인자만 가능합니다" disabled>
+                  🔒 변경 (권한없음)
+                </button>`
+            }
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+  } catch (err) {
+    console.error('보관함 목록 불러오기 오류:', err);
+    showToast('보관함 목록을 불러오는 중 오류가 발생했습니다.', 'error');
+  } finally {
+    loading.style.display = 'none';
+  }
+}
+
 async function showApprovalDetail(id, mode = 'view') {
   try {
     const { data, error } = await db
@@ -859,10 +937,10 @@ async function showApprovalDetail(id, mode = 'view') {
 
     document.getElementById('approval-modal').style.display = 'flex';
 
-    // ── 결재 버튼 권한 제어 ──
+    // ── 결재 버튼 및 상태 수정 버튼 제어 ──
     const actionsEl = document.getElementById('approval-modal-actions');
     if (actionsEl) {
-      if (mode === 'approve') {
+      if (mode === 'approve' || mode === 'edit') {
         const hasApproveRole = currentUser &&
           (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
 
@@ -870,22 +948,38 @@ async function showApprovalDetail(id, mode = 'view') {
           actionsEl.style.display = 'flex';
           actionsEl.style.justifyContent = 'flex-end';
           actionsEl.style.gap = '0.5rem';
-          actionsEl.innerHTML = `
-            <button class="btn btn-danger" onclick="submitApproval('반려')">❌ 부적합 (반려)</button>
-            <button class="btn btn-primary" onclick="submitApproval('승인')">✅ 적합 (승인)</button>
-          `;
+          
+          if (mode === 'approve') {
+            actionsEl.innerHTML = `
+              <button class="btn btn-danger" onclick="submitApproval('반려')">❌ 부적합 (반려)</button>
+              <button class="btn btn-primary" onclick="submitApproval('승인')">✅ 적합 (승인)</button>
+            `;
+          } else if (mode === 'edit') {
+            // 보관함에서 상태 수정 모드일 때
+            const isApproved = data.approval_status === '승인';
+            const toggleTo = isApproved ? '반려' : '승인';
+            const toggleBtnText = isApproved ? '❌ 부적합(반려)으로 변경' : '✅ 적합(승인)으로 변경';
+            const btnClass = isApproved ? 'btn-danger' : 'btn-primary';
+            
+            actionsEl.innerHTML = `
+              <div style="flex:1; text-align:left; color:var(--text-muted); font-size:0.85rem; align-self:center;">
+                현재 상태: <strong style="color:var(--text-main);">${data.approval_status}</strong>
+              </div>
+              <button class="btn ${btnClass}" onclick="submitApproval('${toggleTo}')">${toggleBtnText}</button>
+            `;
+          }
         } else {
           actionsEl.style.display = 'block';
           actionsEl.innerHTML = `
             <div style="text-align:center; padding:0.75rem; background:rgba(255,200,0,0.1);
               border:1px solid rgba(255,200,0,0.3); border-radius:8px;
               color:var(--text-secondary); font-size:0.9rem;">
-              🔒 결재 권한은 승인자만 가능합니다.
+              🔒 권한이 부족합니다.
             </div>
           `;
         }
       } else {
-        // mode === 'view' 이면 액션 영역(결재 버튼 등)을 아예 숨김
+        // mode === 'view' 이면 액션 영역 숨김
         actionsEl.style.display = 'none';
       }
     }
@@ -930,7 +1024,14 @@ async function submitApproval(decision) {
 
     showToast(`방문자가 성공적으로 ${decision} 처리되었습니다.`, 'success');
     closeApprovalModal();
-    loadPendingApprovals(); // 리스트 새로고침
+    
+    // 현재 활성화된 탭에 따라 리스트 새로고침
+    const activeTabPanel = document.querySelector('.tab-panel.active');
+    if (activeTabPanel && activeTabPanel.id === 'tab-archive') {
+      loadArchiveApprovals();
+    } else {
+      loadPendingApprovals();
+    }
   } catch (err) {
     console.error('결재 처리 오류:', err);
     showToast('결재 처리 중 오류가 발생했습니다.', 'error');
