@@ -1033,12 +1033,24 @@ async function showApprovalDetail(id, mode = 'view') {
             const toggleTo = isApproved ? '반려' : '승인';
             const toggleBtnText = isApproved ? '❌ 부적합(반려)으로 변경' : '✅ 적합(승인)으로 변경';
             const btnClass = isApproved ? 'btn-danger' : 'btn-primary';
+
+            const isFitnessSuitable = data.fitness_status === '적합';
+            const toggleFitnessTo = isFitnessSuitable ? '부적합' : '적합';
+            const toggleFitnessBtnText = isFitnessSuitable ? '❌ 부적합으로 변경' : '✅ 적합으로 변경';
+            const fitnessBtnClass = isFitnessSuitable ? 'btn-danger' : 'btn-primary';
             
+            actionsEl.style.display = 'block';
             actionsEl.innerHTML = `
-              <div style="flex:1; text-align:left; color:var(--text-muted); font-size:0.85rem; align-self:center;">
-                현재 상태: <strong style="color:var(--text-main);">${data.approval_status}</strong>
+              <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#f9fafb; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
+                  <span style="font-size:0.85rem; color:var(--text-secondary);">안내자 평가 (현재: <strong style="color:var(--text-main);">${data.fitness_status || '미선택'}</strong>)</span>
+                  <button class="btn ${fitnessBtnClass}" style="padding:0.3rem 0.75rem; font-size:0.85rem;" onclick="submitFitnessChange('${toggleFitnessTo}')">${toggleFitnessBtnText}</button>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#f9fafb; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
+                  <span style="font-size:0.85rem; color:var(--text-secondary);">최종 결재 (현재: <strong style="color:var(--text-main);">${data.approval_status}</strong>)</span>
+                  <button class="btn ${btnClass}" style="padding:0.3rem 0.75rem; font-size:0.85rem;" onclick="submitApproval('${toggleTo}')">${toggleBtnText}</button>
+                </div>
               </div>
-              <button class="btn ${btnClass}" onclick="submitApproval('${toggleTo}')">${toggleBtnText}</button>
             `;
           }
         } else {
@@ -1107,6 +1119,50 @@ async function submitApproval(decision) {
   } catch (err) {
     console.error('결재 처리 오류:', err);
     showToast('결재 처리 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+async function submitFitnessChange(decision) {
+  if (!currentApprovalRecordId) return;
+
+  const hasApproveRole = currentUser &&
+    (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+  if (!hasApproveRole) {
+    showToast('권한이 없습니다.', 'error');
+    return;
+  }
+
+  const confirmMsg = decision === '적합' 
+    ? '안내자 평가를 "적합"으로 변경하시겠습니까?'
+    : '안내자 평가를 "부적합"으로 변경하시겠습니까?';
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const { error } = await db
+      .from('visitors')
+      .update({
+        fitness_status: decision
+      })
+      .eq('id', currentApprovalRecordId);
+
+    if (error) throw error;
+
+    showToast(`안내자 평가가 성공적으로 ${decision}(으)로 변경되었습니다.`, 'success');
+    
+    // 모달을 다시 열어서 변경된 상태를 보여줌
+    showApprovalDetail(currentApprovalRecordId, 'edit');
+    
+    // 현재 활성화된 탭에 따라 리스트 새로고침
+    const activeTabPanel = document.querySelector('.tab-panel.active');
+    if (activeTabPanel && activeTabPanel.id === 'tab-archive') {
+      loadArchiveApprovals(currentArchiveFilter);
+    } else {
+      loadPendingApprovals();
+    }
+  } catch (err) {
+    console.error('평가 변경 처리 오류:', err);
+    showToast('평가 변경 처리 중 오류가 발생했습니다.', 'error');
   }
 }
 
