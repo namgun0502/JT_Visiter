@@ -642,9 +642,13 @@ async function showApprovalDetail(id) {
       .from('visitors')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle(); // data가 없어도 에러를 던지지 않고 null 반환
 
     if (error) throw error;
+    if (!data) {
+      showToast('해당 방문자 기록을 찾을 수 없습니다.', 'error');
+      return;
+    }
 
     currentApprovalRecordId = id;
     
@@ -758,12 +762,31 @@ async function showApprovalDetail(id) {
           </table>
         </div>
 
-        <!-- 안내자 의견 -->
+        <!-- 방문자 서명 -->
+        <div style="${sectionStyle}">
+          <h4 style="${h4Style}">✍️ 방문자 서명</h4>
+          ${data.visitor_signature
+            ? `<div style="background:white; display:inline-block; padding:0.25rem; border-radius:4px; border:1px solid var(--border-color);">
+                <img src="${data.visitor_signature}" alt="방문자 서명" style="max-height:100px; display:block;">
+               </div>`
+            : `<p style="color:var(--text-muted); font-size:0.9rem;">서명 없음</p>`
+          }
+        </div>
+
+        <!-- 안내자 확인 -->
         <div style="${sectionStyle}">
           <h4 style="${h4Style}">👤 안내자 확인</h4>
           <p><strong>안내자:</strong> ${escapeHtml(data.guide_name || '미지정')}</p>
           <p><strong>특이사항:</strong> ${escapeHtml(data.remarks || '없음')}</p>
-          ${data.guide_signature ? `<img src="${data.guide_signature}" alt="안내자 서명" style="max-height:80px; background:white; margin-top:0.5rem; border-radius:4px;">` : ''}
+          ${data.guide_signature
+            ? `<div style="margin-top:0.5rem;">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.25rem;">안내자 서명:</p>
+                <div style="background:white; display:inline-block; padding:0.25rem; border-radius:4px; border:1px solid var(--border-color);">
+                  <img src="${data.guide_signature}" alt="안내자 서명" style="max-height:80px; display:block;">
+                </div>
+               </div>`
+            : ''
+          }
         </div>
 
       </div>
