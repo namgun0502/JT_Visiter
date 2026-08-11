@@ -664,23 +664,23 @@ async function loadPendingApprovals() {
         card.className = 'record-card';
         card.innerHTML = `
           <div class="record-header">
-            <h3 class="record-name">${record.visitor_name} <span class="tag tag-pending">승인 대기</span></h3>
+            <h3 class="record-name">${record.visitor_name || record.name || '이름 없음'} <span class="tag tag-pending">승인 대기</span></h3>
             <span class="record-date">${record.visit_date} ${record.visit_time || ''}</span>
           </div>
           <div class="record-body">
-            <p><strong>회사:</strong> ${record.visitor_company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || ''}</p>
+            <p><strong>회사:</strong> ${record.visitor_company || record.company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || record.purpose || ''}</p>
             <p><strong>안내자:</strong> ${record.guide_name || '미지정'}</p>
           </div>
           <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
-            <!-- 상세보기: 누구나 -->
+            <!-- 상세보기: 누구나 (모달에 결재버튼 없음) -->
             <button class="btn btn-ghost" style="flex:1; min-width:120px;"
-              onclick="showApprovalDetail('${record.id}')">
+              onclick="showApprovalDetail('${record.id}', 'view')">
               🔍 상세 보기
             </button>
-            <!-- 결재: 승인자 권한만 -->
+            <!-- 결재: 승인자 권한만 (모달에 결재버튼 있음) -->
             ${canApprove
               ? `<button class="btn btn-primary" style="flex:1; min-width:120px;"
-                  onclick="showApprovalDetail('${record.id}')">
+                  onclick="showApprovalDetail('${record.id}', 'approve')">
                   ✅ 결재하기
                 </button>`
               : `<button class="btn btn-ghost" style="flex:1; min-width:120px; opacity:0.45; cursor:not-allowed;"
@@ -701,7 +701,7 @@ async function loadPendingApprovals() {
   }
 }
 
-async function showApprovalDetail(id) {
+async function showApprovalDetail(id, mode = 'view') {
   try {
     const { data, error } = await db
       .from('visitors')
@@ -742,7 +742,7 @@ async function showApprovalDetail(id) {
     const complianceQuestions = [
       { key: 'compliance_q1', text: '본 시설은 엄격한 위생 관리가 필요한 화장품 생산 구역으로 입실 전 반드시 지정된 위생복과 위생화, 위생모를 착용하고 철저한 손 소독을 실시해야 합니다.', isYesGood: true },
       { key: 'compliance_q2', text: '생산 구역 내에서는 음식물 섭취 및 흡연을 엄격히 금지하며, 이물 혼입 방지를 위해 반지, 시계 등 모든 개인 장신구의 착용이 제한됩니다.', isYesGood: true },
-      { key: 'compliance_q3', text: '방문 시 안내자의 지시에 따라 지정된 동선으로만 이동해야 하며, 허가되지 않은 생산 설비나 원료를 임의로 조작하거나 접촉하지 않습니다.', isYesGood: true },
+      { key: 'compliance_q3', text: '방문 시 안내자의 지시에 따라 지정된 동선으로만 이동해야 이동해야 하며, 허가되지 않은 생산 설비나 원료를 임의로 조작하거나 접촉하지 않습니다.', isYesGood: true },
       { key: 'compliance_q4', text: '시설 내부의 모든 촬영 및 녹취는 금지되며, 방문을 통해 취득한 기술 정보나 영업 비밀을 외부에 유출하지 않을 것을 약속합니다.', isYesGood: true },
       { key: 'compliance_q5', text: '위 수칙을 위반하거나 관리자의 정당한 통제에 따르지 않을 경우 출입이 제한될 수 있음을 숙지하고 이에 동의합니다.', isYesGood: true },
     ];
@@ -777,9 +777,9 @@ async function showApprovalDetail(id) {
         <!-- 방문자 기본 정보 -->
         <div style="${sectionStyle}">
           <h4 style="${h4Style}">📋 방문자 정보</h4>
-          <p><strong>이름:</strong> ${escapeHtml(data.visitor_name)} (${escapeHtml(data.visitor_company || '소속 없음')})</p>
+          <p><strong>이름:</strong> ${escapeHtml(data.visitor_name || data.name || '이름 없음')} (${escapeHtml(data.visitor_company || data.company || '소속 없음')})</p>
           <p><strong>방문 일시:</strong> ${data.visit_date} ${data.visit_time || ''}</p>
-          <p><strong>방문 목적:</strong> ${escapeHtml(data.visit_purpose || '')}${data.visit_purpose_other ? ' - ' + escapeHtml(data.visit_purpose_other) : ''}</p>
+          <p><strong>방문 목적:</strong> ${escapeHtml(data.visit_purpose || data.purpose || '')}${data.visit_purpose_other ? ' - ' + escapeHtml(data.visit_purpose_other) : ''}</p>
         </div>
 
         <!-- 건강 상태 점검 -->
@@ -860,27 +860,33 @@ async function showApprovalDetail(id) {
     document.getElementById('approval-modal').style.display = 'flex';
 
     // ── 결재 버튼 권한 제어 ──
-    // 로그인 된 사람이 '승인자' 또는 '안내자+승인자'일 때만 결재 버튼 표시
     const actionsEl = document.getElementById('approval-modal-actions');
     if (actionsEl) {
-      const hasApproveRole = currentUser &&
-        (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+      if (mode === 'approve') {
+        const hasApproveRole = currentUser &&
+          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
 
-      if (hasApproveRole) {
-        actionsEl.style.display = 'flex';
-        actionsEl.style.justifyContent = 'flex-end';
-        actionsEl.style.gap = '0.5rem';
+        if (hasApproveRole) {
+          actionsEl.style.display = 'flex';
+          actionsEl.style.justifyContent = 'flex-end';
+          actionsEl.style.gap = '0.5rem';
+          actionsEl.innerHTML = `
+            <button class="btn btn-danger" onclick="submitApproval('반려')">❌ 부적합 (반려)</button>
+            <button class="btn btn-primary" onclick="submitApproval('승인')">✅ 적합 (승인)</button>
+          `;
+        } else {
+          actionsEl.style.display = 'block';
+          actionsEl.innerHTML = `
+            <div style="text-align:center; padding:0.75rem; background:rgba(255,200,0,0.1);
+              border:1px solid rgba(255,200,0,0.3); border-radius:8px;
+              color:var(--text-secondary); font-size:0.9rem;">
+              🔒 결재 권한은 승인자만 가능합니다.
+            </div>
+          `;
+        }
       } else {
-        // 결재 권한이 없는 경우 버튼 대신 안내 문구 표시
-        actionsEl.style.display = 'block';
-        actionsEl.innerHTML = `
-          <div style="text-align:center; padding:0.75rem; background:rgba(255,200,0,0.1);
-            border:1px solid rgba(255,200,0,0.3); border-radius:8px;
-            color:var(--text-secondary); font-size:0.9rem;">
-            🔒 결재 권한은 승인자만 가능합니다.
-            ${!currentUser ? '<br><button class="btn btn-ghost" style="margin-top:0.5rem; font-size:0.85rem;" onclick="openAuthModal(\'login\')">🔐 로그인하기</button>' : ''}
-          </div>
-        `;
+        // mode === 'view' 이면 액션 영역(결재 버튼 등)을 아예 숨김
+        actionsEl.style.display = 'none';
       }
     }
   } catch (err) {
