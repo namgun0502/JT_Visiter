@@ -95,10 +95,18 @@ function switchTab(tabId) {
     targetPanel.style.display = 'block';
   }
 
-  // 결재 승인 탭인 경우 데이터 로드
+  // 탭별 데이터 로드
   if (tabId === 'approval') {
     loadPendingApprovals();
   }
+  if (tabId === 'admin') {
+    loadAdminEmployees();
+  }
+
+  // 페이지 제목도 바꿀
+  const titles = { register: '방문자 등록', approval: '결재 승인', admin: '관리자' };
+  const pageTitle = document.getElementById('page-title');
+  if (pageTitle) pageTitle.textContent = titles[tabId] || '';
 }
 
 // =====================================================================
@@ -488,21 +496,27 @@ function updateEmployeeDropdowns(employees) {
   const guideSelect    = document.getElementById('s4-guide');
   const approverSelect = document.getElementById('s4-approver');
 
-  [guideSelect, approverSelect].forEach(select => {
+  // 역할에 따라 직원 목록 분류
+  // role 컬럼이 없는 기존 데이터는 안내자로 취급
+  const guides    = employees.filter(e => !e.role || e.role === '안내자' || e.role === '안내자+승인자');
+  const approvers = employees.filter(e => e.role === '승인자' || e.role === '안내자+승인자');
+
+  // 특정 select 요소를 특정 목록으로 채우는 내부 함수
+  function fillSelect(select, list) {
     if (!select) return;
     const currentVal = select.value;
-    // 기존 옵션 초기화 (첫 번째 '선택하세요' 옵션 유지)
     while (select.options.length > 1) select.remove(1);
-    // 직원 목록을 옵션으로 추가
-    employees.forEach(e => {
+    list.forEach(e => {
       const opt = document.createElement('option');
       opt.value = e.name;
       opt.textContent = e.department ? `${e.name} (${e.department})` : e.name;
       select.appendChild(opt);
     });
-    // 이전에 선택된 값이 있으면 유지
     if (currentVal) select.value = currentVal;
-  });
+  }
+
+  fillSelect(guideSelect, guides);
+  fillSelect(approverSelect, approvers);
 }
 
 // Step 4로 이동할 때 최신 직원 목록을 드롭다운에 채웁니다
@@ -688,5 +702,186 @@ async function submitApproval(decision) {
   } catch (err) {
     console.error('결재 처리 오류:', err);
     showToast('결재 처리 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+// =====================================================================
+// 관리자 탭 기능 (신규)
+// =====================================================================
+
+// 기본 비밀번호는 'admin1234' 입니다. (localStorage에 저장하여 변경 가능)
+// ⚠️ 이것은 간단한 프론트엔드 잠금입니다. 민감한 데이터 보호용이 아닌,
+//    실수로 접근하는 것을 막는 용도입니다.
+const DEFAULT_ADMIN_PASSWORD = 'admin1234';
+
+function getAdminPassword() {
+  return localStorage.getItem('adminPassword') || DEFAULT_ADMIN_PASSWORD;
+}
+
+// 관리자 버튼 클릭 시 비밀번호 모달 표시
+function checkAdminPassword() {
+  const modal = document.getElementById('admin-password-modal');
+  const input = document.getElementById('admin-password-input');
+  if (modal) {
+    modal.style.display = 'flex';
+    if (input) { input.value = ''; setTimeout(() => input.focus(), 100); }
+  }
+}
+
+// 비밀번호 확인 모달 닫기
+function closeAdminPasswordModal() {
+  const modal = document.getElementById('admin-password-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+// 비밀번호 제출 처리
+function submitAdminPassword() {
+  const input = document.getElementById('admin-password-input');
+  if (!input) return;
+
+  if (input.value === getAdminPassword()) {
+    closeAdminPasswordModal();
+    // 관리자 탭으로 이동 (비밀번호가 맞으면 탭 전환)
+    switchTab('admin');
+    // 관리자 버튼도 active 상태로 변경
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    const adminBtn = document.getElementById('tab-admin-btn');
+    if (adminBtn) {
+      adminBtn.classList.add('active');
+      adminBtn.setAttribute('aria-selected', 'true');
+    }
+    showToast('관리자 페이지에 접속했습니다.', 'success');
+  } else {
+    showToast('비밀번호가 올바르지 않습니다.', 'error');
+    input.value = '';
+    input.focus();
+  }
+}
+
+// 관리자 비밀번호 변경
+function changeAdminPassword() {
+  const newPw  = document.getElementById('new-password')?.value;
+  const newPw2 = document.getElementById('new-password-confirm')?.value;
+
+  if (!newPw || newPw.length < 4) {
+    showToast('비밀번호는 4자 이상이어야 합니다.', 'error'); return;
+  }
+  if (newPw !== newPw2) {
+    showToast('비밀번호가 일치하지 않습니다.', 'error'); return;
+  }
+
+  localStorage.setItem('adminPassword', newPw);
+  showToast('✅ 비밀번호가 변경되었습니다!', 'success');
+  document.getElementById('new-password').value = '';
+  document.getElementById('new-password-confirm').value = '';
+}
+
+// ── 관리자 탭: 직원 목록 불러오기 ──
+async function loadAdminEmployees() {
+  const loading = document.getElementById('admin-emp-loading');
+  const empty   = document.getElementById('admin-emp-empty');
+  const list    = document.getElementById('admin-employee-list');
+  if (!list) return;
+
+  if (loading) loading.style.display = 'flex';
+  if (empty)   empty.style.display   = 'none';
+  list.innerHTML = '';
+
+  try {
+    const { data, error } = await db
+      .from('employees')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      if (empty) empty.style.display = 'flex';
+    } else {
+      data.forEach(emp => {
+        const role = emp.role || '안내자';
+        // 역할에 따라 배지 색상 클래스 결정
+        const badgeClass = role === '안내자' ? 'role-guide'
+                         : role === '승인자' ? 'role-approver'
+                         : 'role-both';
+        const badgeIcon  = role === '안내자' ? '🔵'
+                         : role === '승인자' ? '🟢'
+                         : '🟣';
+
+        const card = document.createElement('div');
+        card.className = 'employee-card';
+        card.innerHTML = `
+          <div class="employee-info">
+            <div class="employee-name">${escapeHtml(emp.name)}</div>
+            <div class="employee-dept">${emp.department ? escapeHtml(emp.department) : '부서 없음'}</div>
+            <span class="role-badge ${badgeClass}">${badgeIcon} ${role}</span>
+          </div>
+          <button class="btn btn-ghost" style="flex-shrink:0; font-size:0.8rem; padding:0.4rem 0.75rem; color:var(--danger);"
+            onclick="handleDeleteEmployee('${emp.id}', '${escapeHtml(emp.name)}')">
+            🗑️ 삭제
+          </button>
+        `;
+        list.appendChild(card);
+      });
+    }
+  } catch (err) {
+    console.error('직원 목록 불러오기 오류:', err);
+    showToast('직원 목록을 불러오는 중 오류가 발생했습니다.', 'error');
+  } finally {
+    if (loading) loading.style.display = 'none';
+  }
+}
+
+// ── 관리자 탭: 직원 추가 ──
+async function handleAddEmployee(event) {
+  event.preventDefault();
+
+  const name = document.getElementById('e-name')?.value.trim();
+  const dept = document.getElementById('e-dept')?.value.trim();
+  const role = document.getElementById('e-role')?.value || '안내자';
+
+  if (!name) { showToast('이름을 입력해 주세요.', 'error'); return; }
+
+  const btn = document.getElementById('add-employee-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>저장 중...</span>'; }
+
+  try {
+    const { error } = await db.from('employees').insert([{ name, department: dept || null, role }]);
+    if (error) throw error;
+
+    showToast(`✅ ${name} (${role}) 직원이 등록되었습니다!`, 'success');
+    // 폼 초기화
+    document.getElementById('e-name').value = '';
+    document.getElementById('e-dept').value = '';
+    document.getElementById('e-role').value = '안내자';
+    // 목록 새로고침
+    loadAdminEmployees();
+    // 위자드 드롭다운도 갱신
+    loadEmployees();
+  } catch (err) {
+    console.error('직원 등록 오류:', err);
+    showToast('직원 등록 중 오류가 발생했습니다: ' + err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span>+ 등록하기</span>'; }
+  }
+}
+
+// ── 관리자 탭: 직원 삭제 ──
+async function handleDeleteEmployee(id, name) {
+  if (!confirm(`"${name}" 직원을 삭제할까요?\n삭제 후에는 복구할 수 없습니다.`)) return;
+
+  try {
+    const { error } = await db.from('employees').delete().eq('id', id);
+    if (error) throw error;
+
+    showToast(`"${name}" 직원이 삭제되었습니다.`, 'success');
+    loadAdminEmployees();
+    loadEmployees(); // 위자드 드롭다운도 갱신
+  } catch (err) {
+    console.error('직원 삭제 오류:', err);
+    showToast('삭제 중 오류가 발생했습니다.', 'error');
   }
 }
