@@ -106,9 +106,11 @@ body {
 .app-wrapper {
   position: relative;
   z-index: 1;
-  max-width: 1200px;      /* 사이드바가 포함되므로 너비를 넓힙니다 */
-  margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+  width: 100%;              /* 화면 전체 너비 사용 */
+  max-width: 100%;          /* 최대 너비 제한 해제 */
+  margin: 0;
+  padding: 1.5rem 2rem 3rem; /* 좌우 여백을 2rem으로 */
+  box-sizing: border-box;
   display: flex;
   flex-direction: row;    /* 가로 배치 */
   align-items: flex-start;
