@@ -430,7 +430,10 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="e-dept">부서 (선택)</label>
-                    <input type="text" id="e-dept" class="form-input" placeholder="영업팀" maxlength="50" />
+                    <input type="text" id="e-dept" class="form-input" placeholder="영업팀" maxlength="50" list="dept-datalist" />
+                    <datalist id="dept-datalist">
+                      <!-- JS에서 기존 부서 목록을 채웁니다 -->
+                    </datalist>
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="e-role">역할 <span class="required">*</span></label>

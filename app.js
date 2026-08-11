@@ -851,9 +851,9 @@ async function loadAdminEmployees() {
     if (!data || data.length === 0) {
       if (empty) empty.style.display = 'flex';
     } else {
+      // 1. 직원 목록 카드 렌더링
       data.forEach(emp => {
         const role = emp.role || '안내자';
-        // 역할에 따라 배지 색상 클래스 결정
         const badgeClass = role === '안내자' ? 'role-guide'
                          : role === '승인자' ? 'role-approver'
                          : 'role-both';
@@ -876,6 +876,19 @@ async function loadAdminEmployees() {
         `;
         list.appendChild(card);
       });
+
+      // 2. 부서 datalist 자동 완성 채우기
+      const datalist = document.getElementById('dept-datalist');
+      if (datalist) {
+        datalist.innerHTML = '';
+        // 유니크한 부서명만 추출 (null이나 빈 문자열 제외)
+        const uniqueDepts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
+        uniqueDepts.forEach(dept => {
+          const opt = document.createElement('option');
+          opt.value = dept;
+          datalist.appendChild(opt);
+        });
+      }
     }
   } catch (err) {
     console.error('직원 목록 불러오기 오류:', err);
@@ -899,18 +912,56 @@ async function handleAddEmployee(event) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span>저장 중...</span>'; }
 
   try {
-    const { error } = await db.from('employees').insert([{ name, department: dept || null, role }]);
-    if (error) throw error;
+    // 1. 이미 동일한 이름의 직원이 있는지 조회
+    const { data: existingEmp, error: searchError } = await db
+      .from('employees')
+      .select('*')
+      .eq('name', name)
+      .maybeSingle(); // 0개 또는 1개 결과 반환
 
-    showToast(`✅ ${name} (${role}) 직원이 등록되었습니다!`, 'success');
-    // 폼 초기화
+    if (searchError) throw searchError;
+
+    if (existingEmp) {
+      // 2. 이미 존재하는 경우: 역할 비교 후 병합 처리
+      const existingRole = existingEmp.role || '안내자';
+      
+      if (existingRole === '안내자+승인자' || role === '안내자+승인자') {
+        // 이미 겸직이거나 새 역할이 겸직이면 그냥 겸직으로 업데이트
+        const { error: updateError } = await db
+          .from('employees')
+          .update({ role: '안내자+승인자', department: dept || existingEmp.department })
+          .eq('id', existingEmp.id);
+        if (updateError) throw updateError;
+        showToast(`ℹ️ [${name}] 님은 이미 등록되어 겸직(안내자+승인자)으로 통합되었습니다.`, 'success');
+        
+      } else if (existingRole !== role) {
+        // 기존 역할과 새 역할이 다르면 (안내자 vs 승인자) -> 겸직으로 승급
+        const { error: updateError } = await db
+          .from('employees')
+          .update({ role: '안내자+승인자', department: dept || existingEmp.department })
+          .eq('id', existingEmp.id);
+        if (updateError) throw updateError;
+        showToast(`🎉 [${name}] 님이 안내자+승인자로 승급(병합)되었습니다!`, 'success');
+        
+      } else {
+        // 완전히 동일한 역할로 다시 등록하는 경우
+        showToast(`이미 [${role}] 역할을 가진 동일한 이름의 직원이 있습니다.`, 'error');
+        return;
+      }
+    } else {
+      // 3. 없는 경우: 새로 인서트
+      const { error: insertError } = await db.from('employees').insert([{ name, department: dept || null, role }]);
+      if (insertError) throw insertError;
+      showToast(`✅ ${name} (${role}) 직원이 신규 등록되었습니다!`, 'success');
+    }
+
+    // 성공 시 공통 처리 (폼 초기화 및 목록 갱신)
     document.getElementById('e-name').value = '';
     document.getElementById('e-dept').value = '';
     document.getElementById('e-role').value = '안내자';
-    // 목록 새로고침
+    
     loadAdminEmployees();
-    // 위자드 드롭다운도 갱신
-    loadEmployees();
+    loadEmployees(); // 위자드 드롭다운 갱신
   } catch (err) {
     console.error('직원 등록 오류:', err);
     showToast('직원 등록 중 오류가 발생했습니다: ' + err.message, 'error');
