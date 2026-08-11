@@ -648,29 +648,124 @@ async function showApprovalDetail(id) {
 
     currentApprovalRecordId = id;
     
+    // ── 응답값을 뱃지로 변환하는 헬퍼 함수 ──
+    // isYesGood: true면 '예'가 좋은 답변, false면 '아니오'가 좋은 답변
+    function badge(val, isYesGood = true) {
+      const isYes = val === true;
+      const isGood = isYesGood ? isYes : !isYes;
+      const label = isYes ? '예' : '아니오';
+      const color = isGood
+        ? 'background:#10b981; color:#fff;'
+        : 'background:#ef4444; color:#fff;';
+      return `<span style="display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.8rem; font-weight:600; ${color}">${label}</span>`;
+    }
+
+    // ── 건강 점검 질문 목록 (아니오가 정상 = isYesGood: false) ──
+    const healthQuestions = [
+      { key: 'health_q1', text: '최근 1주일 내 감염병(감기, 눈병 등)에 걸린 적이 있나요?', isYesGood: false },
+      { key: 'health_q2', text: '현재 소화기 증상(설사, 복통 등)이 있나요?', isYesGood: false },
+      { key: 'health_q3', text: '피부질환(고름, 심한 습진 등)이 있나요?', isYesGood: false },
+      { key: 'health_q4', text: '인화물, 음식물, 위생용품을 소지하고 있나요?', isYesGood: false },
+      { key: 'health_q5', text: '탈락 위험이 있는 장신구(반지 등)를 착용하고 있나요?', isYesGood: false },
+    ];
+
+    // ── 준수사항 질문 목록 (예가 정상 = isYesGood: true) ──
+    const complianceQuestions = [
+      { key: 'compliance_q1', text: '본 시설은 엄격한 위생 관리가 필요한 화장품 생산 구역으로 입실 전 반드시 지정된 위생복과 위생화, 위생모를 착용하고 철저한 손 소독을 실시해야 합니다.', isYesGood: true },
+      { key: 'compliance_q2', text: '생산 구역 내에서는 음식물 섭취 및 흡연을 엄격히 금지하며, 이물 혼입 방지를 위해 반지, 시계 등 모든 개인 장신구의 착용이 제한됩니다.', isYesGood: true },
+      { key: 'compliance_q3', text: '방문 시 안내자의 지시에 따라 지정된 동선으로만 이동해야 하며, 허가되지 않은 생산 설비나 원료를 임의로 조작하거나 접촉하지 않습니다.', isYesGood: true },
+      { key: 'compliance_q4', text: '시설 내부의 모든 촬영 및 녹취는 금지되며, 방문을 통해 취득한 기술 정보나 영업 비밀을 외부에 유출하지 않을 것을 약속합니다.', isYesGood: true },
+      { key: 'compliance_q5', text: '위 수칙을 위반하거나 관리자의 정당한 통제에 따르지 않을 경우 출입이 제한될 수 있음을 숙지하고 이에 동의합니다.', isYesGood: true },
+    ];
+
+    // 문제 있는 항목(비정상 응답)이 있는지 확인
+    const healthIssues = healthQuestions.filter(q => data[q.key] === true); // 건강은 '예'가 문제
+    const complianceIssues = complianceQuestions.filter(q => data[q.key] === false); // 준수사항은 '아니오'가 문제
+
+    // 건강 점검 행 렌더링
+    const healthRows = healthQuestions.map(q =>
+      `<tr style="${data[q.key] === true ? 'background:rgba(239,68,68,0.08);' : ''}">
+        <td style="padding:0.5rem 0.25rem; font-size:0.85rem; color:var(--text-secondary); vertical-align:middle;">${q.text}</td>
+        <td style="padding:0.5rem 0.5rem; text-align:center; white-space:nowrap; vertical-align:middle;">${badge(data[q.key], q.isYesGood)}</td>
+      </tr>`
+    ).join('');
+
+    // 준수사항 행 렌더링
+    const complianceRows = complianceQuestions.map(q =>
+      `<tr style="${data[q.key] === false ? 'background:rgba(239,68,68,0.08);' : ''}">
+        <td style="padding:0.5rem 0.25rem; font-size:0.85rem; color:var(--text-secondary); vertical-align:middle;">${q.text}</td>
+        <td style="padding:0.5rem 0.5rem; text-align:center; white-space:nowrap; vertical-align:middle;">${badge(data[q.key], q.isYesGood)}</td>
+      </tr>`
+    ).join('');
+
+    const sectionStyle = 'background:var(--bg); padding:1rem; border-radius:var(--radius-md);';
+    const h4Style = 'margin:0 0 0.75rem 0; font-size:1rem;';
+
     const body = document.getElementById('approval-modal-body');
     body.innerHTML = `
-      <div style="display: grid; gap: 1rem;">
-        <div style="background: var(--bg); padding: 1rem; border-radius: var(--radius-md);">
-          <h4>방문자 정보</h4>
-          <p><strong>이름:</strong> ${data.visitor_name} (${data.company || '소속 없음'})</p>
-          <p><strong>방문 일시:</strong> ${new Date(data.visit_date).toLocaleString('ko-KR')}</p>
-          <p><strong>방문 목적:</strong> ${data.purpose}</p>
+      <div style="display:grid; gap:1rem;">
+
+        <!-- 방문자 기본 정보 -->
+        <div style="${sectionStyle}">
+          <h4 style="${h4Style}">📋 방문자 정보</h4>
+          <p><strong>이름:</strong> ${escapeHtml(data.visitor_name)} (${escapeHtml(data.visitor_company || '소속 없음')})</p>
+          <p><strong>방문 일시:</strong> ${data.visit_date} ${data.visit_time || ''}</p>
+          <p><strong>방문 목적:</strong> ${escapeHtml(data.visit_purpose || '')}${data.visit_purpose_other ? ' - ' + escapeHtml(data.visit_purpose_other) : ''}</p>
         </div>
-        
-        <div style="background: var(--bg); padding: 1rem; border-radius: var(--radius-md);">
-          <h4>건강 상태 점검 (모두 '예'여야 함)</h4>
-          <p>1. 최근 14일 이내 해외 방문: ${data.health_q1 ? '예' : '아니오'}</p>
-          <p>2. 발열 또는 호흡기 증상: ${data.health_q2 ? '예' : '아니오'}</p>
-          <p>3. 확진자 접촉 이력: ${data.health_q3 ? '예' : '아니오'}</p>
+
+        <!-- 건강 상태 점검 -->
+        <div style="${sectionStyle}">
+          <h4 style="${h4Style}">
+            🏥 Step 2. 건강 상태 자가점검
+            <span style="font-size:0.8rem; font-weight:400; color:var(--text-muted); margin-left:0.5rem;">
+              (모두 <strong style="color:#10b981;">아니오</strong>여야 정상)
+            </span>
+          </h4>
+          ${healthIssues.length > 0
+            ? `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(239,68,68,0.12); border-left:3px solid #ef4444; border-radius:4px; font-size:0.85rem; color:#ef4444;">
+                ⚠️ 비정상 응답 ${healthIssues.length}개 항목이 있습니다. 확인이 필요합니다.
+               </div>`
+            : `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(16,185,129,0.1); border-left:3px solid #10b981; border-radius:4px; font-size:0.85rem; color:#10b981;">
+                ✅ 모든 항목이 정상입니다.
+               </div>`
+          }
+          <table style="width:100%; border-collapse:collapse;">
+            <tbody>${healthRows}</tbody>
+          </table>
         </div>
-        
-        <div style="background: var(--bg); padding: 1rem; border-radius: var(--radius-md);">
-          <h4>안내자 의견</h4>
-          <p><strong>안내자:</strong> ${data.guide_name}</p>
-          <p><strong>비고:</strong> ${data.remarks || '없음'}</p>
-          ${data.guide_signature ? `<img src="${data.guide_signature}" alt="안내자 서명" style="max-height: 80px; background: white; margin-top: 0.5rem;">` : ''}
+
+        <!-- 준수사항 및 보안 동의 -->
+        <div style="${sectionStyle}">
+          <h4 style="${h4Style}">
+            📜 Step 3. 준수사항 및 보안 동의
+            <span style="font-size:0.8rem; font-weight:400; color:var(--text-muted); margin-left:0.5rem;">
+              (모두 <strong style="color:#10b981;">예</strong>여야 정상)
+            </span>
+          </h4>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.75rem;">
+            아래 수칙을 숙지하고 동의(예)했는지 확인합니다.
+          </p>
+          ${complianceIssues.length > 0
+            ? `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(239,68,68,0.12); border-left:3px solid #ef4444; border-radius:4px; font-size:0.85rem; color:#ef4444;">
+                ⚠️ 미동의 항목 ${complianceIssues.length}개가 있습니다. 확인이 필요합니다.
+               </div>`
+            : `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(16,185,129,0.1); border-left:3px solid #10b981; border-radius:4px; font-size:0.85rem; color:#10b981;">
+                ✅ 모든 항목에 동의하였습니다.
+               </div>`
+          }
+          <table style="width:100%; border-collapse:collapse;">
+            <tbody>${complianceRows}</tbody>
+          </table>
         </div>
+
+        <!-- 안내자 의견 -->
+        <div style="${sectionStyle}">
+          <h4 style="${h4Style}">👤 안내자 확인</h4>
+          <p><strong>안내자:</strong> ${escapeHtml(data.guide_name || '미지정')}</p>
+          <p><strong>특이사항:</strong> ${escapeHtml(data.remarks || '없음')}</p>
+          ${data.guide_signature ? `<img src="${data.guide_signature}" alt="안내자 서명" style="max-height:80px; background:white; margin-top:0.5rem; border-radius:4px;">` : ''}
+        </div>
+
       </div>
     `;
 
