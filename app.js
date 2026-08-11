@@ -479,9 +479,13 @@ function resetWizard() {
 // =====================================================================
 async function handleSave() {
   // Step 4 유효성 검사
+  const fitnessSelected = document.querySelector('.yn-btn[data-q="fitness_status"].selected');
   const guideEl    = document.getElementById('s4-guide');
   const approverEl = document.getElementById('s4-approver');
 
+  if (!fitnessSelected) {
+    showToast('안내자의 적합 여부를 선택해 주세요.', 'error'); return;
+  }
   if (!guideEl.value) {
     showToast('안내자를 선택해 주세요.', 'error'); return;
   }
@@ -495,7 +499,7 @@ async function handleSave() {
   formData.remarks         = document.getElementById('s4-remarks').value.trim();
   formData.approver_name   = approverEl.value;
   formData.approval_status = '대기';
-  formData.fitness_status  = '대기';
+  formData.fitness_status  = fitnessSelected.dataset.val;
 
   // 저장 버튼을 비활성화 (중복 클릭 방지)
   const saveBtn = document.getElementById('save-btn');
@@ -969,6 +973,13 @@ async function showApprovalDetail(id, mode = 'view') {
         <!-- 안내자 확인 -->
         <div style="${sectionStyle}">
           <h4 style="${h4Style}">👤 안내자 확인</h4>
+          <p><strong>안내자 평가(적합 여부):</strong> ${
+            data.fitness_status === '적합' 
+              ? badge(true, true).replace('예', '적합') 
+              : data.fitness_status === '부적합' 
+                ? badge(false, true).replace('아니오', '부적합') 
+                : '<span style="color:var(--text-muted);">미선택</span>'
+          }</p>
           <p><strong>안내자:</strong> ${escapeHtml(data.guide_name || '미지정')}</p>
           <p><strong>특이사항:</strong> ${escapeHtml(data.remarks || '없음')}</p>
           ${data.guide_signature
