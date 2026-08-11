@@ -122,19 +122,20 @@ body {
    5. 사이드바 (LNB) & 헤더
    ========================================================= */
 .app-sidebar {
-  width: 250px;
+  width: 200px;           /* 200px로 줄여 오른쪽 공간 최대화 */
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  padding: 1.5rem;
+  padding: 1.25rem 1rem;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: sticky;
   top: 1.5rem;
+  height: fit-content;
 }
 
 .sidebar-header {
@@ -811,12 +812,7 @@ body {
 /* =========================================================
    17. 하단 푸터
    ========================================================= */
-.app-footer {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  padding-top: 0.5rem;
-}
+
 
 /* =========================================================
    18. 반응형 디자인 (모바일 화면 최적화)
