@@ -166,7 +166,7 @@ body {
   text-align: right;
 }
 
-
+@keyframes fadeSlideIn {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -176,6 +176,7 @@ body {
     transform: translateY(0);
   }
 }
+
 
 /* =========================================================
    8. 카드 (글래스모피즘 스타일)
