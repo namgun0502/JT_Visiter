@@ -173,6 +173,19 @@ function goStep(targetStep) {
     populateEmployeeDropdowns();
   }
 
+  // 캔버스는 화면에 보이지 않을 때(display: none) 크기가 0이 되어 서명이 깨집니다.
+  // 탭이 활성화되어 화면에 나타난 직후에 캔버스 크기를 정확히 다시 계산해주어야 합니다.
+  setTimeout(() => {
+    if (targetStep === 3 && visitorSigPad && visitorSigPad.isEmpty()) {
+      resizeCanvas(document.getElementById('visitor-signature-canvas'));
+      visitorSigPad.clear();
+    }
+    if (targetStep === 4 && guideSigPad && guideSigPad.isEmpty()) {
+      resizeCanvas(document.getElementById('guide-signature-canvas'));
+      guideSigPad.clear();
+    }
+  }, 50);
+
   // 위로 스크롤
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
