@@ -1850,7 +1850,7 @@ function exportToCSV() {
   const endDate = document.getElementById('ledger-end-date').value;
   
   link.setAttribute('href', url);
-  link.setAttribute('download', \`방문자_출입_관리대장_\${startDate}_\${endDate}.csv\`);
+  link.setAttribute('download', `방문자_출입_관리대장_${startDate}_${endDate}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
