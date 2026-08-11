@@ -808,12 +808,18 @@ async function deleteArchiveRecord(id) {
   if (!confirm('정말 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) return;
 
   try {
-    const { error } = await db
+    const { data, error } = await db
       .from('visitors')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      showToast('삭제 권한이 없거나 이미 삭제되었습니다. (DB RLS 삭제 정책을 확인하세요)', 'error');
+      return;
+    }
     
     showToast('기록이 삭제되었습니다.', 'success');
     loadArchiveApprovals(currentArchiveFilter);
