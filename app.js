@@ -148,12 +148,30 @@ function switchTab(tabId) {
   if (tabId === 'archive') {
     loadArchiveApprovals();
   }
+  if (tabId === 'ledger') {
+    // 이번 달 1일부터 오늘까지를 기본 날짜로 설정
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    // YYYY-MM-DD 포맷
+    const formatDate = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    document.getElementById('ledger-start-date').value = formatDate(firstDay);
+    document.getElementById('ledger-end-date').value = formatDate(today);
+    
+    loadLedger();
+  }
   if (tabId === 'admin') {
     loadAdminEmployees();
   }
 
   // 페이지 제목 변경
-  const titles = { register: '방문자 등록', approval: '결재 승인 대기열', archive: '적합/부적합 보관함', admin: '관리자' };
+  const titles = { register: '방문자 등록', approval: '결재 승인 대기열', archive: '적합/부적합 보관함', ledger: '관리대장 출력', admin: '관리자' };
   const pageTitle = document.getElementById('page-title');
   if (pageTitle) pageTitle.textContent = titles[tabId] || '';
 }
@@ -1705,4 +1723,135 @@ function logout() {
   if (approvalPanel && approvalPanel.classList.contains('active')) {
     switchTab('register');
   }
+}
+
+// =====================================================================
+// 관리대장 출력 및 DB 추출 기능
+// =====================================================================
+let currentLedgerData = [];
+
+async function loadLedger() {
+  const startDate = document.getElementById('ledger-start-date').value;
+  const endDate = document.getElementById('ledger-end-date').value;
+  const tbody = document.getElementById('ledger-tbody');
+
+  if (!startDate || !endDate) {
+    showToast('시작일과 종료일을 모두 선택해 주세요.', 'error');
+    return;
+  }
+
+  tbody.innerHTML = '<tr><td colspan="9" style="padding:2rem;">데이터를 불러오는 중...</td></tr>';
+
+  try {
+    const { data, error } = await db
+      .from('visitors')
+      .select('*')
+      // 승인 또는 반려 처리된 건만 가져옴 (결재 완료된 건)
+      .in('approval_status', ['승인', '반려'])
+      .gte('visit_date', startDate)
+      .lte('visit_date', endDate)
+      .order('visit_date', { ascending: true })
+      .order('visit_time', { ascending: true });
+
+    if (error) throw error;
+    
+    currentLedgerData = data || [];
+    renderLedgerTable();
+  } catch (err) {
+    console.error('관리대장 로드 오류:', err);
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:2rem; color:red;">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>';
+  }
+}
+
+function renderLedgerTable() {
+  const tbody = document.getElementById('ledger-tbody');
+  tbody.innerHTML = '';
+
+  if (currentLedgerData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:2rem;">해당 기간에 결재 완료된 방문 기록이 없습니다.</td></tr>';
+    return;
+  }
+
+  currentLedgerData.forEach((record, index) => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #ddd';
+    
+    const visitDateTime = `${record.visit_date} ${record.visit_time || ''}`.trim();
+    const company = record.visitor_company || record.company || '';
+    const name = record.visitor_name || record.name || '';
+    const purpose = record.visit_purpose || record.purpose || '';
+    const guideName = record.guide_name || '';
+    
+    // 적합/부적합 표시 (인쇄 시 색상이 나오려면 브라우저 옵션 설정 필요)
+    const fitnessText = record.fitness_status === '적합' 
+      ? '<span style="color:#10b981; font-weight:600;">적합</span>' 
+      : record.fitness_status === '부적합' ? '<span style="color:#ef4444; font-weight:600;">부적합</span>' : '미선택';
+      
+    // 승인/반려 표시
+    const approvalText = record.approval_status === '승인'
+      ? '<span style="color:#10b981; font-weight:bold;">승인</span>'
+      : '<span style="color:#ef4444; font-weight:bold;">반려</span>';
+
+    tr.innerHTML = `
+      <td style="border:1px solid #000; padding:6px 4px;">${index + 1}</td>
+      <td style="border:1px solid #000; padding:6px 4px;">${visitDateTime}</td>
+      <td style="border:1px solid #000; padding:6px 4px;">${company}</td>
+      <td style="border:1px solid #000; padding:6px 4px;">${name}</td>
+      <td style="border:1px solid #000; padding:6px 4px;">${purpose}</td>
+      <td style="border:1px solid #000; padding:6px 4px;">${guideName}</td>
+      <td style="border:1px solid #000; padding:6px 4px;">${fitnessText}</td>
+      <td style="border:1px solid #000; padding:6px 4px;">${approvalText}</td>
+      <td style="border:1px solid #000; padding:6px 4px;"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function exportToCSV() {
+  if (currentLedgerData.length === 0) {
+    showToast('다운로드할 데이터가 없습니다.', 'error');
+    return;
+  }
+
+  // BOM (Byte Order Mark) for UTF-8 Excel compatibility
+  const BOM = '\uFEFF';
+  let csvContent = BOM + "No,방문일시,소속,성명,방문 목적,안내자,적합 여부,최종 결재\n";
+
+  currentLedgerData.forEach((record, index) => {
+    const visitDateTime = `${record.visit_date} ${record.visit_time || ''}`.trim();
+    // CSV 파싱 오류를 막기 위해 쉼표 제거 및 쌍따옴표 처리
+    const escapeCsv = (str) => '"' + String(str).replace(/"/g, '""') + '"';
+    
+    const company = escapeCsv(record.visitor_company || record.company || '');
+    const name = escapeCsv(record.visitor_name || record.name || '');
+    const purpose = escapeCsv(record.visit_purpose || record.purpose || '');
+    const guideName = escapeCsv(record.guide_name || '');
+    const fitness = escapeCsv(record.fitness_status || '미선택');
+    const approval = escapeCsv(record.approval_status || '');
+
+    const row = [
+      index + 1,
+      visitDateTime,
+      company,
+      name,
+      purpose,
+      guideName,
+      fitness,
+      approval
+    ].join(',');
+
+    csvContent += row + "\n";
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const startDate = document.getElementById('ledger-start-date').value;
+  const endDate = document.getElementById('ledger-end-date').value;
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', \`방문자_출입_관리대장_\${startDate}_\${endDate}.csv\`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }

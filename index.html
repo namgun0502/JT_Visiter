@@ -19,6 +19,63 @@
 
   <!-- 우리가 만든 스타일시트 -->
   <link rel="stylesheet" href="style.css" />
+
+  <!-- 대장 인쇄 전용 CSS -->
+  <style>
+    @media print {
+      /* 브라우저 기본 여백 없애기 */
+      @page {
+        margin: 10mm;
+      }
+      
+      /* 숨길 요소들 */
+      .app-sidebar, .app-header, .no-print, .toast-container, .modal-backdrop {
+        display: none !important;
+      }
+
+      /* 메인 콘텐츠 영역 여백 제거 및 전체 화면 사용 */
+      .app-wrapper {
+        display: block;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+      .main-content-wrapper {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+      }
+
+      /* 출력될 영역 설정 */
+      #printable-ledger {
+        display: block !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+        background: white;
+      }
+      
+      /* 모든 탭 패널 중 출력할 패널만 보이게 함 (만약을 대비) */
+      .tab-panel {
+        display: none !important;
+      }
+      #tab-ledger {
+        display: block !important;
+      }
+
+      /* 테이블 테두리를 진하게 */
+      .ledger-table th, .ledger-table td,
+      .approval-block td {
+        border: 1px solid #000 !important;
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -48,6 +105,11 @@
         <button class="nav-btn" id="tab-archive-btn" role="tab" aria-selected="false" onclick="switchTab('archive')">
           <span class="nav-icon">📁</span>
           <span class="nav-text">보관함</span>
+        </button>
+        <!-- 관리대장 탭 -->
+        <button class="nav-btn" id="tab-ledger-btn" role="tab" aria-selected="false" onclick="switchTab('ledger')">
+          <span class="nav-icon">🖨️</span>
+          <span class="nav-text">대장 출력</span>
         </button>
         <!-- 관리자 탭: 비밀번호 확인 후 진입 -->
         <button class="nav-btn" id="tab-admin-btn" role="tab" aria-selected="false" onclick="checkAdminPassword()">
@@ -462,6 +524,79 @@
               <div class="approval-list" id="archive-list">
                 <!-- JS에서 보관함 카드가 동적으로 추가됩니다 -->
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 대장 인쇄 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-ledger" role="tabpanel" style="display:none;">
+          <div class="card no-print">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">🖨️</span> 관리대장 출력</h2>
+              <p class="card-desc">방문자 출입 관리대장을 기간별로 조회하고 인쇄하거나 엑셀(CSV)로 다운로드합니다.</p>
+            </div>
+            
+            <div style="display:flex; gap:1rem; margin-bottom:1.5rem; align-items:flex-end; flex-wrap:wrap;">
+              <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
+                <label class="form-label" for="ledger-start-date">시작일</label>
+                <input type="date" id="ledger-start-date" class="form-input" />
+              </div>
+              <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
+                <label class="form-label" for="ledger-end-date">종료일</label>
+                <input type="date" id="ledger-end-date" class="form-input" />
+              </div>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button class="btn btn-secondary" onclick="loadLedger()">조회</button>
+                <button class="btn btn-primary" onclick="window.print()">📄 PDF 인쇄</button>
+                <button class="btn btn-ghost" onclick="exportToCSV()" style="border: 1px solid var(--border-color);">📥 CSV 다운로드</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 실제 인쇄될 영역 -->
+          <div id="printable-ledger" class="printable-area card" style="margin-top:1rem; padding: 2rem; overflow-x: auto;">
+            <div class="ledger-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem;">
+              <h1 style="font-size: 24px; font-weight: 700; margin: 0; color:#000;">방문자 출입 관리대장</h1>
+              <table class="approval-block" style="border-collapse:collapse; text-align:center; font-size:12px; color:#000;">
+                <tr>
+                  <td rowspan="2" style="border:1px solid #000; width:25px; font-weight:bold; background:#f3f4f6;">결<br><br>재</td>
+                  <td style="border:1px solid #000; width:65px; background:#f3f4f6;">작 성</td>
+                  <td style="border:1px solid #000; width:65px; background:#f3f4f6;">검 토</td>
+                  <td style="border:1px solid #000; width:65px; background:#f3f4f6;">승 인</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #000; height:50px;"></td>
+                  <td style="border:1px solid #000;"></td>
+                  <td style="border:1px solid #000;"></td>
+                </tr>
+              </table>
+            </div>
+
+            <table class="ledger-table" style="width:100%; border-collapse:collapse; text-align:center; font-size:0.85rem; color:#000; min-width:800px;">
+              <thead>
+                <tr style="background:#f3f4f6;">
+                  <th style="border:1px solid #000; padding:6px 4px; width:40px;">No</th>
+                  <th style="border:1px solid #000; padding:6px 4px; width:90px;">방문일시</th>
+                  <th style="border:1px solid #000; padding:6px 4px;">소속</th>
+                  <th style="border:1px solid #000; padding:6px 4px;">성명</th>
+                  <th style="border:1px solid #000; padding:6px 4px;">방문 목적</th>
+                  <th style="border:1px solid #000; padding:6px 4px;">안내자</th>
+                  <th style="border:1px solid #000; padding:6px 4px; width:80px;">적합 여부</th>
+                  <th style="border:1px solid #000; padding:6px 4px; width:80px;">최종 결재</th>
+                  <th style="border:1px solid #000; padding:6px 4px; width:60px;">확인</th>
+                </tr>
+              </thead>
+              <tbody id="ledger-tbody">
+                <!-- JS에서 채워짐 -->
+              </tbody>
+            </table>
+
+            <div class="ledger-footer" style="display:flex; justify-content:space-between; margin-top:1rem; font-size:0.75rem; color:#000;">
+              <span>JTQF-3120-05 (Rev.1)</span>
+              <span>1/1</span>
+              <span>(주)제니트리</span>
             </div>
           </div>
         </section>
