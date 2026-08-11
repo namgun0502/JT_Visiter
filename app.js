@@ -935,3 +935,17 @@ async function handleDeleteEmployee(id, name) {
     showToast('삭제 중 오류가 발생했습니다.', 'error');
   }
 }
+
+// ── 비밀번호 보이기/숨기기 토글 ──
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈'; // 숨기기 아이콘
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁️'; // 보이기 아이콘
+  }
+}

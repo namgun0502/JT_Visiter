@@ -1539,3 +1539,36 @@ body {
   color: #a78bfa;
   border: 1px solid rgba(139,92,246,0.3);
 }
+
+/* =========================================================
+   비밀번호 표시 토글 (눈알 버튼)
+   ========================================================= */
+.pw-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pw-input-wrapper .form-input {
+  padding-right: 2.5rem; /* 버튼 들어갈 공간 확보 */
+}
+
+.pw-toggle-btn {
+  position: absolute;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+  opacity: 0.6;
+}
+
+.pw-toggle-btn:hover {
+  opacity: 1;
+}
