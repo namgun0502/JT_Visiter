@@ -421,16 +421,6 @@ async function handleSave() {
 }
 
 // =====================================================================
-// 16. 방문 기록 불러오기
-// =====================================================================
-async function loadRecords() {
-  const loadingEl = document.getElementById('records-loading');
-  const emptyEl   = document.getElementById('records-empty');
-  const listEl    = document.getElementById('records-list');
-
-
-
-// =====================================================================
 // 16. 직원 목록 불러오기 (드롭다운 연동용)
 // =====================================================================
 async function loadEmployees() {

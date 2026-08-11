@@ -391,18 +391,7 @@
   <!-- ===== 토스트 알림 (성공/실패 메시지 팝업) ===== -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- ===== 삭제 확인 모달 ===== -->
-  <div class="modal-overlay" id="modal-overlay" style="display:none;" onclick="closeModal()">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-icon">🗑️</div>
-      <h3 class="modal-title">정말 삭제할까요?</h3>
-      <p class="modal-desc" id="modal-desc">이 기록을 삭제하면 복구할 수 없습니다.</p>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeModal()">취소</button>
-        <button class="btn btn-danger" id="modal-confirm-btn">삭제</button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Supabase JavaScript SDK (CDN 버전 2) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
