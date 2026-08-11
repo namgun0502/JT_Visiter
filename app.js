@@ -72,6 +72,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // 탭 전환 기능
 // =====================================================================
 function switchTab(tabId) {
+  // 탭 전환 전 권한 체크 (결재 승인 탭)
+  if (tabId === 'approval') {
+    if (!currentUser) {
+      showToast('결재 승인 탭을 이용하려면 로그인이 필요합니다.', 'error');
+      openAuthModal('login');
+      return; // 탭 전환 취소
+    }
+    if (currentUser.role === '안내자') {
+      showToast('승인자 권한이 없습니다.', 'error');
+      return; // 탭 전환 취소
+    }
+  }
+
   // 모든 탭 버튼과 패널의 활성화 상태 해제
   document.querySelectorAll('.tab-btn, .nav-btn').forEach(btn => {
     btn.classList.remove('active');
@@ -103,7 +116,7 @@ function switchTab(tabId) {
     loadAdminEmployees();
   }
 
-  // 페이지 제목도 바꿀
+  // 페이지 제목 변경
   const titles = { register: '방문자 등록', approval: '결재 승인', admin: '관리자' };
   const pageTitle = document.getElementById('page-title');
   if (pageTitle) pageTitle.textContent = titles[tabId] || '';
@@ -1104,5 +1117,152 @@ async function submitEditEmployee(event) {
     showToast('직원 정보를 수정하는 중 오류가 발생했습니다.', 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '저장'; }
+  }
+}
+
+// =====================================================================
+// 직원 로그인 / 회원가입 로직
+// =====================================================================
+let currentAuthMode = 'login';
+
+function openAuthModal(mode = 'login') {
+  setAuthMode(mode);
+  const modal = document.getElementById('auth-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById('auth-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function setAuthMode(mode) {
+  currentAuthMode = mode;
+  const loginBtn = document.getElementById('btn-auth-login');
+  const signupBtn = document.getElementById('btn-auth-signup');
+  const title = document.getElementById('auth-modal-title');
+  const desc = document.getElementById('auth-desc');
+  const submitBtn = document.getElementById('submit-auth-btn');
+  const pwLabel = document.getElementById('auth-pw-label');
+  const hint = document.getElementById('auth-name-hint');
+
+  if (mode === 'login') {
+    loginBtn.style.borderBottom = '2px solid var(--primary-color)';
+    loginBtn.style.color = 'var(--text-main)';
+    signupBtn.style.borderBottom = 'none';
+    signupBtn.style.color = 'var(--text-muted)';
+    
+    title.textContent = '🔐 직원 로그인';
+    desc.textContent = '결재를 위해 이름을 입력하고 로그인하세요.';
+    pwLabel.innerHTML = '비밀번호 <span class="required">*</span>';
+    submitBtn.textContent = '로그인';
+    if(hint) hint.style.display = 'none';
+  } else {
+    signupBtn.style.borderBottom = '2px solid var(--primary-color)';
+    signupBtn.style.color = 'var(--text-main)';
+    loginBtn.style.borderBottom = 'none';
+    loginBtn.style.color = 'var(--text-muted)';
+    
+    title.textContent = '✨ 비밀번호 최초 설정';
+    desc.textContent = '관리자가 등록한 이름으로 새 비밀번호를 설정합니다.';
+    pwLabel.innerHTML = '새 비밀번호 <span class="required">*</span>';
+    submitBtn.textContent = '비밀번호 설정 및 로그인';
+    if(hint) hint.style.display = 'block';
+  }
+}
+
+async function submitAuth(event) {
+  event.preventDefault();
+  const nameInput = document.getElementById('auth-name');
+  const pwInput = document.getElementById('auth-password');
+  const btn = document.getElementById('submit-auth-btn');
+  
+  const name = nameInput.value.trim();
+  const pw = pwInput.value;
+  
+  if (!name || !pw) return;
+  
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+  
+  try {
+    const { data: emp, error } = await db
+      .from('employees')
+      .select('*')
+      .eq('name', name)
+      .maybeSingle();
+      
+    if (error) throw error;
+    
+    if (!emp) {
+      showToast('등록되지 않은 이름입니다. 관리자에게 문의하세요.', 'error');
+      btn.disabled = false;
+      btn.textContent = currentAuthMode === 'login' ? '로그인' : '비밀번호 설정 및 로그인';
+      return;
+    }
+    
+    const pwHash = await hashPassword(pw);
+
+    if (currentAuthMode === 'signup') {
+      if (emp.password_hash) {
+        showToast('이미 비밀번호가 설정되어 있습니다. 로그인 탭을 이용하세요.', 'error');
+        setAuthMode('login');
+      } else {
+        const { error: updateError } = await db
+          .from('employees')
+          .update({ password_hash: pwHash })
+          .eq('id', emp.id);
+        
+        if (updateError) throw updateError;
+        
+        showToast('비밀번호가 설정되었습니다. 환영합니다!', 'success');
+        loginSuccess(emp);
+      }
+    } else {
+      if (!emp.password_hash) {
+        showToast('비밀번호가 설정되지 않았습니다. 최초 설정을 진행해 주세요.', 'error');
+        setAuthMode('signup');
+      } else if (emp.password_hash !== pwHash) {
+        showToast('비밀번호가 일치하지 않습니다.', 'error');
+      } else {
+        showToast(`환영합니다, ${emp.name}님!`, 'success');
+        loginSuccess(emp);
+      }
+    }
+  } catch (err) {
+    console.error('인증 오류:', err);
+    showToast('오류가 발생했습니다.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = currentAuthMode === 'login' ? '로그인' : '비밀번호 설정 및 로그인';
+  }
+}
+
+function loginSuccess(emp) {
+  currentUser = {
+    id: emp.id,
+    name: emp.name,
+    role: emp.role,
+    department: emp.department,
+    title: emp.title
+  };
+  localStorage.setItem('currentUser', JSON.stringify(currentUser));
+  closeAuthModal();
+  updateAuthUI();
+  
+  document.getElementById('auth-name').value = '';
+  document.getElementById('auth-password').value = '';
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('currentUser');
+  updateAuthUI();
+  showToast('로그아웃 되었습니다.', 'success');
+  
+  // 결재 승인 탭에 있다면 방문자 등록 탭으로 쫓아내기
+  const approvalPanel = document.getElementById('tab-approval');
+  if (approvalPanel && approvalPanel.classList.contains('active')) {
+    switchTab('register');
   }
 }
