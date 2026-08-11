@@ -706,16 +706,33 @@ async function submitApproval(decision) {
 }
 
 // =====================================================================
-// 관리자 탭 기능 (신규)
+// 관리자 탭 기능
 // =====================================================================
 
-// 기본 비밀번호는 'admin1234' 입니다. (localStorage에 저장하여 변경 가능)
-// ⚠️ 이것은 간단한 프론트엔드 잠금입니다. 민감한 데이터 보호용이 아닌,
-//    실수로 접근하는 것을 막는 용도입니다.
-const DEFAULT_ADMIN_PASSWORD = 'admin1234';
+// ── 비밀번호를 SHA-256으로 해시하는 함수 ──
+// SHA-256은 단방향 암호화입니다. 해시값으로 원래 비밀번호를
+// 역으로 알아낼 수 없어서 Supabase에 저장해도 안전합니다.
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-function getAdminPassword() {
-  return localStorage.getItem('adminPassword') || DEFAULT_ADMIN_PASSWORD;
+// ── Supabase에서 저장된 비밀번호 해시 가져오기 ──
+async function getAdminPasswordHash() {
+  try {
+    const { data, error } = await db
+      .from('settings')
+      .select('value')
+      .eq('key', 'admin_password_hash')
+      .single();
+    if (error || !data) return null;
+    return data.value;
+  } catch {
+    return null;
+  }
 }
 
 // 관리자 버튼 클릭 시 비밀번호 모달 표시
@@ -734,35 +751,55 @@ function closeAdminPasswordModal() {
   if (modal) modal.style.display = 'none';
 }
 
-// 비밀번호 제출 처리
-function submitAdminPassword() {
+// 비밀번호 제출 처리 (Supabase에서 해시값 비교)
+async function submitAdminPassword() {
   const input = document.getElementById('admin-password-input');
+  const confirmBtn = document.querySelector('#admin-password-modal .btn-primary');
   if (!input) return;
 
-  if (input.value === getAdminPassword()) {
-    closeAdminPasswordModal();
-    // 관리자 탭으로 이동 (비밀번호가 맞으면 탭 전환)
-    switchTab('admin');
-    // 관리자 버튼도 active 상태로 변경
-    document.querySelectorAll('.nav-btn').forEach(b => {
-      b.classList.remove('active');
-      b.setAttribute('aria-selected', 'false');
-    });
-    const adminBtn = document.getElementById('tab-admin-btn');
-    if (adminBtn) {
-      adminBtn.classList.add('active');
-      adminBtn.setAttribute('aria-selected', 'true');
+  const pw = input.value;
+  if (!pw) { showToast('비밀번호를 입력해 주세요.', 'error'); return; }
+
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '확인 중...'; }
+
+  try {
+    const inputHash = await hashPassword(pw);
+    const storedHash = await getAdminPasswordHash();
+
+    // DB에 저장된 값이 'init'이거나 없으면 초기 상태 → 기본값 'admin1234'와 비교
+    let isCorrect = false;
+    if (!storedHash || storedHash === 'init') {
+      const defaultHash = await hashPassword('admin1234');
+      isCorrect = (inputHash === defaultHash);
+    } else {
+      isCorrect = (inputHash === storedHash);
     }
-    showToast('관리자 페이지에 접속했습니다.', 'success');
-  } else {
-    showToast('비밀번호가 올바르지 않습니다.', 'error');
-    input.value = '';
-    input.focus();
+
+    if (isCorrect) {
+      closeAdminPasswordModal();
+      switchTab('admin');
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      const adminBtn = document.getElementById('tab-admin-btn');
+      if (adminBtn) { adminBtn.classList.add('active'); adminBtn.setAttribute('aria-selected', 'true'); }
+      showToast('관리자 페이지에 접속했습니다.', 'success');
+    } else {
+      showToast('비밀번호가 올바르지 않습니다.', 'error');
+      input.value = '';
+      input.focus();
+    }
+  } catch (err) {
+    console.error('비밀번호 확인 오류:', err);
+    showToast('오류가 발생했습니다. 다시 시도해 주세요.', 'error');
+  } finally {
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '🔓 확인'; }
   }
 }
 
-// 관리자 비밀번호 변경
-function changeAdminPassword() {
+// 관리자 비밀번호 변경 (SHA-256 해시 후 Supabase에 저장)
+async function changeAdminPassword() {
   const newPw  = document.getElementById('new-password')?.value;
   const newPw2 = document.getElementById('new-password-confirm')?.value;
 
@@ -773,10 +810,23 @@ function changeAdminPassword() {
     showToast('비밀번호가 일치하지 않습니다.', 'error'); return;
   }
 
-  localStorage.setItem('adminPassword', newPw);
-  showToast('✅ 비밀번호가 변경되었습니다!', 'success');
-  document.getElementById('new-password').value = '';
-  document.getElementById('new-password-confirm').value = '';
+  try {
+    const newHash = await hashPassword(newPw);
+
+    // Supabase settings 테이블에 upsert (있으면 수정, 없으면 삽입)
+    const { error } = await db
+      .from('settings')
+      .upsert({ key: 'admin_password_hash', value: newHash, updated_at: new Date().toISOString() });
+
+    if (error) throw error;
+
+    showToast('✅ 비밀번호가 변경되어 서버에 안전하게 저장되었습니다!', 'success');
+    document.getElementById('new-password').value = '';
+    document.getElementById('new-password-confirm').value = '';
+  } catch (err) {
+    console.error('비밀번호 변경 오류:', err);
+    showToast('비밀번호 변경 중 오류가 발생했습니다.', 'error');
+  }
 }
 
 // ── 관리자 탭: 직원 목록 불러오기 ──
