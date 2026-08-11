@@ -1088,8 +1088,7 @@ async function submitApproval(decision) {
     const { error } = await db
       .from('visitors')
       .update({
-        approval_status: decision,
-        fitness_status: decision === '승인' ? '적합' : '부적합'
+        approval_status: decision
       })
       .eq('id', currentApprovalRecordId);
 
