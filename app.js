@@ -47,6 +47,47 @@ let pendingDeleteType = null; // 'visitor' 또는 'employee'
 let allRecords = [];
 
 // =====================================================================
+// 인증(로그인) 전역 상태
+// =====================================================================
+// currentUser: 로그인한 직원 정보. 로그인 안 했으면 null
+let currentUser = null;
+
+// 페이지 로드 시 localStorage에서 이전 로그인 정보 복원 + 헤더 UI 갱신
+function initAuth() {
+  try {
+    const stored = localStorage.getItem('currentUser');
+    if (stored) currentUser = JSON.parse(stored);
+  } catch(e) {
+    currentUser = null;
+  }
+  updateAuthUI();
+}
+
+// 헤더의 로그인/로그아웃 영역을 현재 상태에 맞게 갱신
+function updateAuthUI() {
+  const section = document.getElementById('user-auth-section');
+  if (!section) return;
+
+  if (currentUser) {
+    section.innerHTML = `
+      <span style="color:var(--text-secondary); font-size:0.85rem; white-space:nowrap;">
+        <strong style="color:var(--text-main);">${escapeHtml(currentUser.name)}</strong>
+        <span style="color:var(--primary-color);">(${escapeHtml(currentUser.role)})</span>님
+      </span>
+      <button class="btn btn-ghost" style="padding:0.25rem 0.6rem; font-size:0.78rem; white-space:nowrap;" onclick="logout()">
+        로그아웃
+      </button>
+    `;
+  } else {
+    section.innerHTML = `
+      <button class="btn btn-ghost" style="padding:0.25rem 0.6rem; font-size:0.78rem; white-space:nowrap; color:var(--primary-color);" onclick="openAuthModal('login')">
+        🔐 로그인
+      </button>
+    `;
+  }
+}
+
+// =====================================================================
 // 3. 페이지가 처음 로드될 때 실행되는 초기화 함수
 // =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
