@@ -704,8 +704,21 @@ async function loadPendingApprovals() {
   }
 }
 
+let currentArchiveFilter = 'all'; // 전체, 승인, 반려
+
 // 보관함 목록 로드 (승인 또는 반려된 건들)
-async function loadArchiveApprovals() {
+async function loadArchiveApprovals(filter = 'all') {
+  currentArchiveFilter = filter;
+  
+  // 버튼 스타일 업데이트
+  document.querySelectorAll('#filter-all, #filter-approved, #filter-rejected').forEach(btn => {
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-ghost');
+  });
+  if (filter === 'all') document.getElementById('filter-all').classList.replace('btn-ghost', 'btn-primary');
+  if (filter === '승인') document.getElementById('filter-approved').classList.replace('btn-ghost', 'btn-primary');
+  if (filter === '반려') document.getElementById('filter-rejected').classList.replace('btn-ghost', 'btn-primary');
+
   const loading = document.getElementById('archive-loading');
   const empty = document.getElementById('archive-empty');
   const list = document.getElementById('archive-list');
@@ -717,11 +730,18 @@ async function loadArchiveApprovals() {
   list.innerHTML = '';
 
   try {
-    const { data, error } = await db
+    let query = db
       .from('visitors')
       .select('*')
-      .neq('approval_status', '대기')
       .order('created_at', { ascending: false });
+
+    if (filter === 'all') {
+      query = query.neq('approval_status', '대기');
+    } else {
+      query = query.eq('approval_status', filter);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -760,6 +780,10 @@ async function loadArchiveApprovals() {
               ? `<button class="btn btn-secondary" style="flex:1; min-width:120px;"
                   onclick="showApprovalDetail('${record.id}', 'edit')">
                   ✏️ 상태 변경
+                </button>
+                <button class="btn btn-ghost" style="padding: 0 0.5rem; color:#ef4444;" title="삭제"
+                  onclick="deleteArchiveRecord('${record.id}')">
+                  🗑️
                 </button>`
               : `<button class="btn btn-ghost" style="flex:1; min-width:120px; opacity:0.45; cursor:not-allowed;"
                   title="상태 변경은 승인자만 가능합니다" disabled>
@@ -776,6 +800,26 @@ async function loadArchiveApprovals() {
     showToast('보관함 목록을 불러오는 중 오류가 발생했습니다.', 'error');
   } finally {
     loading.style.display = 'none';
+  }
+}
+
+// 보관함 기록 삭제 (권한자만 가능)
+async function deleteArchiveRecord(id) {
+  if (!confirm('정말 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) return;
+
+  try {
+    const { error } = await db
+      .from('visitors')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    
+    showToast('기록이 삭제되었습니다.', 'success');
+    loadArchiveApprovals(currentArchiveFilter);
+  } catch (err) {
+    console.error('기록 삭제 중 오류:', err);
+    showToast('기록 삭제 중 오류가 발생했습니다.', 'error');
   }
 }
 

@@ -433,6 +433,13 @@
             </div>
             
             <div id="archive-container">
+              <!-- 보관함 전용 필터 -->
+              <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                <button class="btn btn-primary" id="filter-all" onclick="loadArchiveApprovals('all')" style="border-radius:20px; padding:0.4rem 1rem;">전체</button>
+                <button class="btn btn-ghost" id="filter-approved" onclick="loadArchiveApprovals('승인')" style="border-radius:20px; padding:0.4rem 1rem;">적합 (승인)</button>
+                <button class="btn btn-ghost" id="filter-rejected" onclick="loadArchiveApprovals('반려')" style="border-radius:20px; padding:0.4rem 1rem;">부적합 (반려)</button>
+              </div>
+              
               <div class="loading-state" id="archive-loading" style="display:none;">
                 <div class="spinner"></div>
                 <p>보관함 목록을 불러오는 중...</p>
