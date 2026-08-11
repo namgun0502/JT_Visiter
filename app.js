@@ -62,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Supabase에서 직원 목록을 불러옵니다 (안내자/승인자 드롭다운용)
   loadEmployees();
 
+  // 저장된 로그인 정보 불러오기 & 헤더 UI 갱신
+  initAuth();
+
   // 초기 탭 데이터를 불러옵니다
   if (document.getElementById('tab-approval').classList.contains('active')) {
     loadPendingApprovals();
@@ -612,18 +615,39 @@ async function loadPendingApprovals() {
       empty.style.display = 'flex';
     } else {
       data.forEach(record => {
+        // 결재 권한 여부 확인 (승인자 또는 안내자+승인자)
+        const canApprove = currentUser &&
+          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+
         const card = document.createElement('div');
         card.className = 'record-card';
         card.innerHTML = `
           <div class="record-header">
             <h3 class="record-name">${record.visitor_name} <span class="tag tag-pending">승인 대기</span></h3>
-            <span class="record-date">${new Date(record.visit_date).toLocaleString('ko-KR')}</span>
+            <span class="record-date">${record.visit_date} ${record.visit_time || ''}</span>
           </div>
           <div class="record-body">
-            <p><strong>회사:</strong> ${record.company || 'N/A'} <strong>목적:</strong> ${record.purpose}</p>
-            <p><strong>안내자:</strong> ${record.guide_name}</p>
+            <p><strong>회사:</strong> ${record.visitor_company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || ''}</p>
+            <p><strong>안내자:</strong> ${record.guide_name || '미지정'}</p>
           </div>
-          <button class="btn btn-primary" style="margin-top: 1rem;" onclick="showApprovalDetail('${record.id}')">상세 보기 및 결재</button>
+          <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
+            <!-- 상세보기: 누구나 -->
+            <button class="btn btn-ghost" style="flex:1; min-width:120px;"
+              onclick="showApprovalDetail('${record.id}')">
+              🔍 상세 보기
+            </button>
+            <!-- 결재: 승인자 권한만 -->
+            ${canApprove
+              ? `<button class="btn btn-primary" style="flex:1; min-width:120px;"
+                  onclick="showApprovalDetail('${record.id}')">
+                  ✅ 결재하기
+                </button>`
+              : `<button class="btn btn-ghost" style="flex:1; min-width:120px; opacity:0.45; cursor:not-allowed;"
+                  title="승인자 권한이 필요합니다" disabled>
+                  🔒 결재 (권한없음)
+                </button>`
+            }
+          </div>
         `;
         list.appendChild(card);
       });
