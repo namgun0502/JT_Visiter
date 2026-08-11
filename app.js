@@ -61,7 +61,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Supabase에서 직원 목록을 불러옵니다 (안내자/승인자 드롭다운용)
   loadEmployees();
+
+  // 초기 탭 데이터를 불러옵니다
+  if (document.getElementById('tab-approval').classList.contains('active')) {
+    loadPendingApprovals();
+  }
 });
+
+// =====================================================================
+// 탭 전환 기능
+// =====================================================================
+function switchTab(tabId) {
+  // 모든 탭 버튼과 패널의 활성화 상태 해제
+  document.querySelectorAll('.tab-btn, .nav-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.setAttribute('aria-selected', 'false');
+  });
+  document.querySelectorAll('.tab-panel').forEach(panel => {
+    panel.classList.remove('active');
+    panel.style.display = 'none';
+  });
+
+  // 선택한 탭 버튼과 패널 활성화
+  const targetBtn = document.getElementById(`tab-${tabId}-btn`);
+  const targetPanel = document.getElementById(`tab-${tabId}`);
+  
+  if (targetBtn) {
+    targetBtn.classList.add('active');
+    targetBtn.setAttribute('aria-selected', 'true');
+  }
+  if (targetPanel) {
+    targetPanel.classList.add('active');
+    targetPanel.style.display = 'block';
+  }
+
+  // 결재 승인 탭인 경우 데이터 로드
+  if (tabId === 'approval') {
+    loadPendingApprovals();
+  }
+}
 
 // =====================================================================
 // 4. 현재 날짜/시간 자동 입력
@@ -336,11 +374,7 @@ function selectYN(btn) {
 // =====================================================================
 // 13. 적합/부적합 버튼 선택
 // =====================================================================
-function selectFitness(btn) {
-  document.querySelectorAll('.fitness-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  formData.fitness_status = btn.dataset.value;
-}
+
 
 // =====================================================================
 // 14. 취소 버튼 → 위자드 초기화
@@ -376,10 +410,6 @@ function resetWizard() {
   if (guideSigPad)   guideSigPad.clear();
 
   // Step 4 초기화
-  document.querySelectorAll('.fitness-btn').forEach(b => b.classList.remove('active'));
-  const fitOk = document.querySelector('.fitness-ok');
-  if (fitOk) fitOk.classList.add('active'); // '적합'을 기본값으로
-  formData.fitness_status = '적합';
   document.getElementById('s4-remarks').value = '';
   document.getElementById('s4-guide').value = '';
   document.getElementById('s4-approver').value = '';
@@ -408,7 +438,7 @@ async function handleSave() {
   formData.remarks         = document.getElementById('s4-remarks').value.trim();
   formData.approver_name   = approverEl.value;
   formData.approval_status = '대기';
-  if (!formData.fitness_status) formData.fitness_status = '적합';
+  formData.fitness_status  = '대기';
 
   // 저장 버튼을 비활성화 (중복 클릭 방지)
   const saveBtn = document.getElementById('save-btn');
@@ -525,4 +555,138 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+// =====================================================================
+// 결재 승인 로직 (신규)
+// =====================================================================
+let currentApprovalRecordId = null;
+
+async function loadPendingApprovals() {
+  const loading = document.getElementById('approval-loading');
+  const empty = document.getElementById('approval-empty');
+  const list = document.getElementById('approval-list');
+  const badge = document.getElementById('approval-badge');
+
+  if (!loading || !empty || !list || !badge) return;
+
+  loading.style.display = 'flex';
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  try {
+    const { data, error } = await db
+      .from('visitors')
+      .select('*')
+      .eq('approval_status', '대기')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    badge.textContent = data.length.toString();
+
+    if (data.length === 0) {
+      empty.style.display = 'flex';
+    } else {
+      data.forEach(record => {
+        const card = document.createElement('div');
+        card.className = 'record-card';
+        card.innerHTML = `
+          <div class="record-header">
+            <h3 class="record-name">${record.visitor_name} <span class="tag tag-pending">승인 대기</span></h3>
+            <span class="record-date">${new Date(record.visit_date).toLocaleString('ko-KR')}</span>
+          </div>
+          <div class="record-body">
+            <p><strong>회사:</strong> ${record.company || 'N/A'} <strong>목적:</strong> ${record.purpose}</p>
+            <p><strong>안내자:</strong> ${record.guide_name}</p>
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem;" onclick="showApprovalDetail('${record.id}')">상세 보기 및 결재</button>
+        `;
+        list.appendChild(card);
+      });
+    }
+  } catch (err) {
+    console.error('승인 목록 불러오기 오류:', err);
+    showToast('대기 목록을 불러오는 중 오류가 발생했습니다.', 'error');
+  } finally {
+    loading.style.display = 'none';
+  }
+}
+
+async function showApprovalDetail(id) {
+  try {
+    const { data, error } = await db
+      .from('visitors')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    currentApprovalRecordId = id;
+    
+    const body = document.getElementById('approval-modal-body');
+    body.innerHTML = `
+      <div style="display: grid; gap: 1rem;">
+        <div style="background: var(--bg); padding: 1rem; border-radius: var(--radius-md);">
+          <h4>방문자 정보</h4>
+          <p><strong>이름:</strong> ${data.visitor_name} (${data.company || '소속 없음'})</p>
+          <p><strong>방문 일시:</strong> ${new Date(data.visit_date).toLocaleString('ko-KR')}</p>
+          <p><strong>방문 목적:</strong> ${data.purpose}</p>
+        </div>
+        
+        <div style="background: var(--bg); padding: 1rem; border-radius: var(--radius-md);">
+          <h4>건강 상태 점검 (모두 '예'여야 함)</h4>
+          <p>1. 최근 14일 이내 해외 방문: ${data.health_q1 ? '예' : '아니오'}</p>
+          <p>2. 발열 또는 호흡기 증상: ${data.health_q2 ? '예' : '아니오'}</p>
+          <p>3. 확진자 접촉 이력: ${data.health_q3 ? '예' : '아니오'}</p>
+        </div>
+        
+        <div style="background: var(--bg); padding: 1rem; border-radius: var(--radius-md);">
+          <h4>안내자 의견</h4>
+          <p><strong>안내자:</strong> ${data.guide_name}</p>
+          <p><strong>비고:</strong> ${data.remarks || '없음'}</p>
+          ${data.guide_signature ? `<img src="${data.guide_signature}" alt="안내자 서명" style="max-height: 80px; background: white; margin-top: 0.5rem;">` : ''}
+        </div>
+      </div>
+    `;
+
+    document.getElementById('approval-modal').style.display = 'flex';
+  } catch (err) {
+    console.error('상세 정보 불러오기 오류:', err);
+    showToast('상세 정보를 불러올 수 없습니다.', 'error');
+  }
+}
+
+function closeApprovalModal() {
+  document.getElementById('approval-modal').style.display = 'none';
+  currentApprovalRecordId = null;
+}
+
+async function submitApproval(decision) {
+  if (!currentApprovalRecordId) return;
+
+  const confirmMsg = decision === '승인' 
+    ? '이 방문자를 "적합(승인)" 처리하시겠습니까?'
+    : '이 방문자를 "부적합(반려)" 처리하시겠습니까?';
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const { error } = await db
+      .from('visitors')
+      .update({
+        approval_status: decision,
+        fitness_status: decision === '승인' ? '적합' : '부적합'
+      })
+      .eq('id', currentApprovalRecordId);
+
+    if (error) throw error;
+
+    showToast(`방문자가 성공적으로 ${decision} 처리되었습니다.`, 'success');
+    closeApprovalModal();
+    loadPendingApprovals(); // 리스트 새로고침
+  } catch (err) {
+    console.error('결재 처리 오류:', err);
+    showToast('결재 처리 중 오류가 발생했습니다.', 'error');
+  }
 }

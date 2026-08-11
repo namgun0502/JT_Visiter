@@ -106,18 +106,95 @@ body {
 .app-wrapper {
   position: relative;
   z-index: 1;
-  max-width: 900px;       /* 너무 넓어지지 않도록 최대 너비 제한 */
-  margin: 0 auto;         /* 화면 중앙 정렬 */
+  max-width: 1200px;      /* 사이드바가 포함되므로 너비를 넓힙니다 */
+  margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
   display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  flex-direction: row;    /* 가로 배치 */
+  align-items: flex-start;
+  gap: 1.5rem;
   min-height: 100vh;
 }
 
 /* =========================================================
-   5. 상단 헤더
+   5. 사이드바 (LNB) & 헤더
    ========================================================= */
+.app-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: sticky;
+  top: 1.5rem;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.sidebar-header .logo-icon { font-size: 2rem; }
+.sidebar-header .header-title { font-size: 1.25rem; }
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: left;
+}
+
+.nav-btn:hover {
+  color: var(--text-primary);
+  background: var(--glass-hover);
+}
+
+.nav-btn.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+.nav-icon { font-size: 1.2rem; }
+.nav-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,0.25);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.main-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -127,11 +204,6 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.header-logo {
-  display: flex;
   align-items: center;
   gap: 0.85rem;
 }
@@ -1274,5 +1346,59 @@ body {
   .wizard-actions .btn {
     flex: 1;
     min-width: 80px;
+  }
+}
+
+/* =========================================================
+   모바일 반응형 (하단 네비게이션)
+   ========================================================= */
+@media (max-width: 768px) {
+  .app-wrapper {
+    flex-direction: column;
+    padding-bottom: 80px; /* 하단 탭 공간 확보 */
+  }
+  .app-sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 0;
+    border-top: 1px solid var(--glass-border);
+    border-bottom: none;
+    z-index: 1000;
+    gap: 1rem;
+    background: rgba(15, 23, 42, 0.95);
+  }
+  .sidebar-header {
+    display: none; /* 모바일에서는 로고 숨김 */
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-around;
+  }
+  .nav-btn {
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.5rem;
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+  .nav-icon {
+    font-size: 1.5rem;
+  }
+  .nav-text {
+    font-size: 0.75rem;
+  }
+  .nav-badge {
+    position: absolute;
+    top: 5px;
+    right: 20%;
   }
 }

@@ -28,28 +28,38 @@
   <!-- ===================== 앱 전체 감싸는 컨테이너 ===================== -->
   <div class="app-wrapper">
 
-    <!-- ===== 상단 헤더 ===== -->
-    <header class="app-header">
-      <div class="header-logo">
+    <!-- ===== 좌측 사이드바 ===== -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
         <span class="logo-icon">🏢</span>
-        <div class="header-text">
-          <h1 class="header-title">방문자 관리 시스템</h1>
-          <p class="header-subtitle">JT — Visitor Management</p>
-        </div>
+        <h1 class="sidebar-title">방문자 관리</h1>
       </div>
-      <!-- 현재 날짜/시간 표시 -->
-      <div class="header-time" id="current-time"></div>
-    </header>
+      <nav class="sidebar-nav" role="tablist">
+        <button class="nav-btn active" id="tab-register-btn" role="tab" aria-selected="true" onclick="switchTab('register')">
+          <span class="nav-icon">📝</span>
+          <span class="nav-text">방문자 등록</span>
+        </button>
+        <button class="nav-btn" id="tab-approval-btn" role="tab" aria-selected="false" onclick="switchTab('approval')">
+          <span class="nav-icon">✅</span>
+          <span class="nav-text">결재 승인</span>
+          <span class="nav-badge" id="approval-badge">0</span>
+        </button>
+      </nav>
+    </aside>
 
+    <!-- ===== 우측 메인 콘텐츠 영역 ===== -->
+    <div class="main-content-wrapper">
+      <header class="app-header">
+        <h2 class="page-title" id="page-title">방문자 등록</h2>
+        <div class="header-time" id="current-time"></div>
+      </header>
 
+      <main class="app-main">
 
-    <!-- ===== 메인 콘텐츠 영역 ===== -->
-    <main class="app-main">
-
-      <!-- ─────────────────────────────────────────── -->
-      <!-- 방문자 출입기록 (4단계 위자드) -->
-      <!-- ─────────────────────────────────────────── -->
-      <section class="wizard-only-panel">
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 방문자 출입기록 (4단계 위자드) -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel active" id="tab-register" role="tabpanel">
         <div class="card wizard-card">
 
           <!-- ── 프로그레스 바 (단계 표시기) ── -->
@@ -314,14 +324,7 @@
               <p class="step-desc">안내자가 방문자 정보를 최종 확인하고 서명합니다.</p>
             </div>
 
-            <!-- 적합 여부 버튼 -->
-            <div class="form-group">
-              <label class="form-label">적합 여부 <span class="required">*</span></label>
-              <div class="fitness-buttons" id="fitness-buttons">
-                <button type="button" class="fitness-btn fitness-ok active" data-value="적합" onclick="selectFitness(this)">✅ 적합</button>
-                <button type="button" class="fitness-btn fitness-ng" data-value="부적합" onclick="selectFitness(this)">❌ 부적합</button>
-              </div>
-            </div>
+
 
             <!-- 안내자 이름 드롭다운 -->
             <div class="form-group">
@@ -376,11 +379,36 @@
           </div>
 
         </div><!-- /wizard-card -->
-      </section>
+        </section>
 
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 결재 승인 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-approval" role="tabpanel" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">✅</span> 결재 승인 대기열</h2>
+              <p class="card-desc">안내자가 확인을 마친 방문자의 정보를 확인하고 최종 승인합니다.</p>
+            </div>
+            
+            <div id="approval-container">
+              <div class="loading-state" id="approval-loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>대기 목록을 불러오는 중...</p>
+              </div>
+              <div class="empty-state" id="approval-empty" style="display:none;">
+                <span class="empty-icon">🎉</span>
+                <p>승인 대기 중인 방문자가 없습니다.</p>
+              </div>
+              <div class="approval-list" id="approval-list">
+                <!-- JS에서 승인 대기 카드가 동적으로 추가됩니다 -->
+              </div>
+            </div>
+          </div>
+        </section>
 
-
-    </main>
+      </main>
+    </div> <!-- /main-content-wrapper -->
 
     <!-- ===== 하단 푸터 ===== -->
     <footer class="app-footer">
@@ -390,6 +418,23 @@
 
   <!-- ===== 토스트 알림 (성공/실패 메시지 팝업) ===== -->
   <div class="toast-container" id="toast-container"></div>
+
+  <!-- ===== 결재 승인 상세 모달 ===== -->
+  <div class="modal-overlay" id="approval-modal" style="display:none;" onclick="closeApprovalModal()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">결재 승인 상세 내역</h3>
+        <button class="modal-close" onclick="closeApprovalModal()">✕</button>
+      </div>
+      <div class="modal-body" id="approval-modal-body">
+        <!-- JS에서 상세 내용이 채워집니다 -->
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" onclick="submitApproval('반려')">❌ 부적합 (반려)</button>
+        <button class="btn btn-primary" onclick="submitApproval('승인')">✅ 적합 (승인)</button>
+      </div>
+    </div>
+  </div>
 
 
 
