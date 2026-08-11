@@ -429,11 +429,13 @@
                     <input type="text" id="e-name" class="form-input" placeholder="홍길동" required maxlength="50" />
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="e-dept">부서 (선택)</label>
-                    <input type="text" id="e-dept" class="form-input" placeholder="영업팀" maxlength="50" list="dept-datalist" />
-                    <datalist id="dept-datalist">
+                    <label class="form-label" for="e-dept-select">부서 (선택)</label>
+                    <select id="e-dept-select" class="form-input form-select" onchange="toggleDeptInput()">
+                      <option value="">부서 없음</option>
                       <!-- JS에서 기존 부서 목록을 채웁니다 -->
-                    </datalist>
+                      <option value="direct">➕ 새 부서 직접입력...</option>
+                    </select>
+                    <input type="text" id="e-dept-input" class="form-input" placeholder="새 부서명 입력" maxlength="50" style="display:none; margin-top:0.5rem;" />
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="e-role">역할 <span class="required">*</span></label>

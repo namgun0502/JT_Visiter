@@ -877,16 +877,21 @@ async function loadAdminEmployees() {
         list.appendChild(card);
       });
 
-      // 2. 부서 datalist 자동 완성 채우기
-      const datalist = document.getElementById('dept-datalist');
-      if (datalist) {
-        datalist.innerHTML = '';
-        // 유니크한 부서명만 추출 (null이나 빈 문자열 제외)
+      // 2. 부서 select 박스 채우기
+      const deptSelect = document.getElementById('e-dept-select');
+      if (deptSelect) {
+        // 기존 옵션 유지하되, 중간 부서 목록만 초기화
+        deptSelect.innerHTML = `
+          <option value="">부서 없음</option>
+          <option value="direct">➕ 새 부서 직접입력...</option>
+        `;
         const uniqueDepts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
         uniqueDepts.forEach(dept => {
           const opt = document.createElement('option');
           opt.value = dept;
-          datalist.appendChild(opt);
+          opt.textContent = dept;
+          // '직접입력' 옵션 바로 앞에 추가
+          deptSelect.insertBefore(opt, deptSelect.lastElementChild);
         });
       }
     }
@@ -903,7 +908,16 @@ async function handleAddEmployee(event) {
   event.preventDefault();
 
   const name = document.getElementById('e-name')?.value.trim();
-  const dept = document.getElementById('e-dept')?.value.trim();
+  
+  // 부서 처리: select 값이 'direct'면 input에서 가져오고, 아니면 select 값 사용
+  const deptSelectVal = document.getElementById('e-dept-select')?.value;
+  let dept = deptSelectVal;
+  if (deptSelectVal === 'direct') {
+    dept = document.getElementById('e-dept-input')?.value.trim();
+  } else {
+    dept = deptSelectVal?.trim();
+  }
+
   const role = document.getElementById('e-role')?.value || '안내자';
 
   if (!name) { showToast('이름을 입력해 주세요.', 'error'); return; }
@@ -957,7 +971,13 @@ async function handleAddEmployee(event) {
 
     // 성공 시 공통 처리 (폼 초기화 및 목록 갱신)
     document.getElementById('e-name').value = '';
-    document.getElementById('e-dept').value = '';
+    const deptSelect = document.getElementById('e-dept-select');
+    if (deptSelect) deptSelect.value = '';
+    const deptInput = document.getElementById('e-dept-input');
+    if (deptInput) {
+      deptInput.value = '';
+      deptInput.style.display = 'none';
+    }
     document.getElementById('e-role').value = '안내자';
     
     loadAdminEmployees();
@@ -998,5 +1018,20 @@ function togglePasswordVisibility(inputId, btn) {
   } else {
     input.type = 'password';
     btn.textContent = '👁️'; // 보이기 아이콘
+  }
+}
+
+// ── 부서 직접입력 토글 ──
+function toggleDeptInput() {
+  const select = document.getElementById('e-dept-select');
+  const input = document.getElementById('e-dept-input');
+  if (select && input) {
+    if (select.value === 'direct') {
+      input.style.display = 'block';
+      input.focus();
+    } else {
+      input.style.display = 'none';
+      input.value = '';
+    }
   }
 }
