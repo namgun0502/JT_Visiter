@@ -72,19 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // 탭 전환 기능
 // =====================================================================
 function switchTab(tabId) {
-  // 탭 전환 전 권한 체크 (결재 승인 탭)
-  if (tabId === 'approval') {
-    if (!currentUser) {
-      showToast('결재 승인 탭을 이용하려면 로그인이 필요합니다.', 'error');
-      openAuthModal('login');
-      return; // 탭 전환 취소
-    }
-    if (currentUser.role === '안내자') {
-      showToast('승인자 권한이 없습니다.', 'error');
-      return; // 탭 전환 취소
-    }
-  }
-
+  // 결재 승인 탭은 누구나 접근 가능 (보기는 모두 가능)
+  // 다만 승인/반려 결재 버튼은 모달 오픈 시에 권한 체크
   // 모든 탭 버튼과 패널의 활성화 상태 해제
   document.querySelectorAll('.tab-btn, .nav-btn').forEach(btn => {
     btn.classList.remove('active');
@@ -686,6 +675,31 @@ async function showApprovalDetail(id) {
     `;
 
     document.getElementById('approval-modal').style.display = 'flex';
+
+    // ── 결재 버튼 권한 제어 ──
+    // 로그인 된 사람이 '승인자' 또는 '안내자+승인자'일 때만 결재 버튼 표시
+    const actionsEl = document.getElementById('approval-modal-actions');
+    if (actionsEl) {
+      const hasApproveRole = currentUser &&
+        (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+
+      if (hasApproveRole) {
+        actionsEl.style.display = 'flex';
+        actionsEl.style.justifyContent = 'flex-end';
+        actionsEl.style.gap = '0.5rem';
+      } else {
+        // 결재 권한이 없는 경우 버튼 대신 안내 문구 표시
+        actionsEl.style.display = 'block';
+        actionsEl.innerHTML = `
+          <div style="text-align:center; padding:0.75rem; background:rgba(255,200,0,0.1);
+            border:1px solid rgba(255,200,0,0.3); border-radius:8px;
+            color:var(--text-secondary); font-size:0.9rem;">
+            🔒 결재 권한은 승인자만 가능합니다.
+            ${!currentUser ? '<br><button class="btn btn-ghost" style="margin-top:0.5rem; font-size:0.85rem;" onclick="openAuthModal(\'login\')">🔐 로그인하기</button>' : ''}
+          </div>
+        `;
+      }
+    }
   } catch (err) {
     console.error('상세 정보 불러오기 오류:', err);
     showToast('상세 정보를 불러올 수 없습니다.', 'error');
@@ -699,6 +713,14 @@ function closeApprovalModal() {
 
 async function submitApproval(decision) {
   if (!currentApprovalRecordId) return;
+
+  // 승인/반려 시 권한 재확인 (이중 방어)
+  const hasApproveRole = currentUser &&
+    (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+  if (!hasApproveRole) {
+    showToast('결재 권한이 없습니다.', 'error');
+    return;
+  }
 
   const confirmMsg = decision === '승인' 
     ? '이 방문자를 "적합(승인)" 처리하시겠습니까?'
