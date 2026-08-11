@@ -676,7 +676,13 @@ async function loadPendingApprovals() {
           </div>
           <div class="record-body">
             <p><strong>회사:</strong> ${record.visitor_company || record.company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || record.purpose || ''}</p>
-            <p><strong>안내자:</strong> ${record.guide_name || '미지정'}</p>
+            <p><strong>안내자:</strong> ${record.guide_name || '미지정'} &nbsp; <strong>평가:</strong> ${
+              record.fitness_status === '적합' 
+                ? '<span style="color:#10b981; font-weight:600;">적합</span>' 
+                : record.fitness_status === '부적합' 
+                  ? '<span style="color:#ef4444; font-weight:600;">부적합</span>' 
+                  : '<span style="color:var(--text-muted);">미선택</span>'
+            }</p>
           </div>
           <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
             <!-- 상세보기: 누구나 (모달에 결재버튼 없음) -->
@@ -771,7 +777,13 @@ async function loadArchiveApprovals(filter = 'all') {
           </div>
           <div class="record-body">
             <p><strong>회사:</strong> ${record.visitor_company || record.company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || record.purpose || ''}</p>
-            <p><strong>안내자:</strong> ${record.guide_name || '미지정'}</p>
+            <p><strong>안내자:</strong> ${record.guide_name || '미지정'} &nbsp; <strong>평가:</strong> ${
+              record.fitness_status === '적합' 
+                ? '<span style="color:#10b981; font-weight:600;">적합</span>' 
+                : record.fitness_status === '부적합' 
+                  ? '<span style="color:#ef4444; font-weight:600;">부적합</span>' 
+                  : '<span style="color:var(--text-muted);">미선택</span>'
+            }</p>
           </div>
           <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
             <!-- 상세보기 (수정 불가능한 보기 모드) -->
