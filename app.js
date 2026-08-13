@@ -24,7 +24,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 // Supabase 클라이언트 객체를 만듭니다 (이것을 통해 DB에 접근합니다)
 const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 탭이나 브라우저를 닫으면 로그인이 풀리도록(sessionStorage) 설정 추가
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: window.sessionStorage,
+  }
+});
 
 // =====================================================================
 // 2. 위자드 상태 관리
