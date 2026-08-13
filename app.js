@@ -696,9 +696,9 @@ async function loadPendingApprovals() {
             <p><strong>회사:</strong> ${record.visitor_company || record.company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || record.purpose || ''}</p>
             <p><strong>안내자:</strong> ${record.guide_name || '미지정'} &nbsp; <strong>평가:</strong> ${
               record.fitness_status === '적합' 
-                ? '<span style="color:#10b981; font-weight:600;">적합</span>' 
+                ? '<span style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle;">적합</span>' 
                 : record.fitness_status === '부적합' 
-                  ? '<span style="color:#ef4444; font-weight:600;">부적합</span>' 
+                  ? '<span style="display:inline-block; background:#B91C1C; color:#fff; border:1.5px solid #B91C1C; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle;">부적합</span>' 
                   : '<span style="color:var(--text-muted);">미선택</span>'
             }</p>
           </div>
@@ -738,14 +738,49 @@ let currentArchiveFilter = 'all'; // 전체, 승인, 반려
 async function loadArchiveApprovals(filter = 'all') {
   currentArchiveFilter = filter;
   
-  // 버튼 스타일 업데이트
-  document.querySelectorAll('#filter-all, #filter-approved, #filter-rejected').forEach(btn => {
-    btn.classList.remove('btn-primary');
-    btn.classList.add('btn-ghost');
-  });
-  if (filter === 'all') document.getElementById('filter-all').classList.replace('btn-ghost', 'btn-primary');
-  if (filter === '승인') document.getElementById('filter-approved').classList.replace('btn-ghost', 'btn-primary');
-  if (filter === '반려') document.getElementById('filter-rejected').classList.replace('btn-ghost', 'btn-primary');
+  // 전체 버튼 기본 뱃지 스타일 (비활성 시 은은한 배경)
+  const btnAll = document.getElementById('filter-all');
+  btnAll.classList.remove('btn-primary');
+  btnAll.classList.add('btn-ghost');
+  btnAll.style.background = 'rgba(255,255,255,0.05)';
+  btnAll.style.color = 'var(--text-primary)';
+  btnAll.style.border = '1.5px solid rgba(255,255,255,0.2)';
+
+  // 적합 버튼 기본 뱃지 스타일 (비활성 시 연한 초록)
+  const btnApp = document.getElementById('filter-approved');
+  btnApp.classList.remove('btn-primary');
+  btnApp.classList.add('btn-ghost');
+  btnApp.style.background = 'var(--success-light)';
+  btnApp.style.color = 'var(--success)';
+  btnApp.style.border = '1.5px solid var(--success)';
+
+  // 부적합 버튼 기본 뱃지 스타일 (비활성 시 연한 빨강)
+  const btnRej = document.getElementById('filter-rejected');
+  btnRej.classList.remove('btn-primary');
+  btnRej.classList.add('btn-ghost');
+  btnRej.style.background = 'var(--danger-light)';
+  btnRej.style.color = 'var(--danger)';
+  btnRej.style.border = '1.5px solid var(--danger)';
+  
+  // 활성화된 버튼 스타일 적용
+  if (filter === 'all') {
+    btnAll.classList.replace('btn-ghost', 'btn-primary');
+    btnAll.style.background = '#000';
+    btnAll.style.color = '#fff';
+    btnAll.style.border = '1.5px solid #000';
+  }
+  if (filter === '승인') {
+    btnApp.classList.remove('btn-ghost');
+    btnApp.style.background = '#047857';
+    btnApp.style.color = '#fff';
+    btnApp.style.border = '1.5px solid #047857';
+  }
+  if (filter === '반려') {
+    btnRej.classList.remove('btn-ghost');
+    btnRej.style.background = '#B91C1C';
+    btnRej.style.color = '#fff';
+    btnRej.style.border = '1.5px solid #B91C1C';
+  }
 
   const loading = document.getElementById('archive-loading');
   const empty = document.getElementById('archive-empty');
@@ -783,8 +818,8 @@ async function loadArchiveApprovals(filter = 'all') {
 
         const isApproved = record.approval_status === '승인';
         const statusTag = isApproved 
-          ? `<span class="tag tag-approved" style="background:#d1fae5; color:#065f46; border:1px solid #10b981;">적합(승인)</span>` 
-          : `<span class="tag tag-rejected" style="background:#fee2e2; color:#991b1b; border:1px solid #ef4444;">부적합(반려)</span>`;
+          ? `<span class="tag tag-approved" style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle; margin-left:0.5rem;">적합(승인)</span>` 
+          : `<span class="tag tag-rejected" style="display:inline-block; background:#B91C1C; color:#fff; border:1.5px solid #B91C1C; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle; margin-left:0.5rem;">부적합(반려)</span>`;
 
         const card = document.createElement('div');
         card.className = 'record-card';
@@ -797,9 +832,9 @@ async function loadArchiveApprovals(filter = 'all') {
             <p><strong>회사:</strong> ${record.visitor_company || record.company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || record.purpose || ''}</p>
             <p><strong>안내자:</strong> ${record.guide_name || '미지정'} &nbsp; <strong>평가:</strong> ${
               record.fitness_status === '적합' 
-                ? '<span style="color:#10b981; font-weight:600;">적합</span>' 
+                ? '<span style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle;">적합</span>' 
                 : record.fitness_status === '부적합' 
-                  ? '<span style="color:#ef4444; font-weight:600;">부적합</span>' 
+                  ? '<span style="display:inline-block; background:#B91C1C; color:#fff; border:1.5px solid #B91C1C; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle;">부적합</span>' 
                   : '<span style="color:var(--text-muted);">미선택</span>'
             }</p>
           </div>
@@ -815,7 +850,7 @@ async function loadArchiveApprovals(filter = 'all') {
                   onclick="showApprovalDetail('${record.id}', 'edit')">
                   ✏️ 상태 변경
                 </button>
-                <button class="btn btn-ghost" style="padding: 0 0.5rem; color:#ef4444;" title="삭제"
+                <button class="btn btn-ghost" style="padding: 0 0.5rem; color:var(--danger);" title="삭제"
                   onclick="deleteArchiveRecord('${record.id}')">
                   🗑️
                 </button>`
@@ -886,8 +921,8 @@ async function showApprovalDetail(id, mode = 'view') {
       const isGood = isYesGood ? isYes : !isYes;
       const label = isYes ? '예' : '아니오';
       const color = isGood
-        ? 'background:#10b981; color:#fff;'
-        : 'background:#ef4444; color:#fff;';
+        ? 'background:var(--success); color:#fff;'
+        : 'background:var(--danger); color:#fff;';
       return `<span style="display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.8rem; font-weight:600; ${color}">${label}</span>`;
     }
 
@@ -949,14 +984,14 @@ async function showApprovalDetail(id, mode = 'view') {
           <h4 style="${h4Style}">
             🏥 Step 2. 건강 상태 자가점검
             <span style="font-size:0.8rem; font-weight:400; color:var(--text-muted); margin-left:0.5rem;">
-              (모두 <strong style="color:#10b981;">아니오</strong>여야 정상)
+              (모두 <strong style="color:var(--success);">아니오</strong>여야 정상)
             </span>
           </h4>
           ${healthIssues.length > 0
-            ? `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(239,68,68,0.12); border-left:3px solid #ef4444; border-radius:4px; font-size:0.85rem; color:#ef4444;">
+            ? `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:var(--danger-light); border-left:3px solid var(--danger); border-radius:4px; font-size:0.85rem; color:var(--danger);">
                 ⚠️ 비정상 응답 ${healthIssues.length}개 항목이 있습니다. 확인이 필요합니다.
                </div>`
-            : `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(16,185,129,0.1); border-left:3px solid #10b981; border-radius:4px; font-size:0.85rem; color:#10b981;">
+            : `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:var(--success-light); border-left:3px solid var(--success); border-radius:4px; font-size:0.85rem; color:var(--success);">
                 ✅ 모든 항목이 정상입니다.
                </div>`
           }
@@ -970,17 +1005,17 @@ async function showApprovalDetail(id, mode = 'view') {
           <h4 style="${h4Style}">
             📜 Step 3. 준수사항 및 보안 동의
             <span style="font-size:0.8rem; font-weight:400; color:var(--text-muted); margin-left:0.5rem;">
-              (모두 <strong style="color:#10b981;">예</strong>여야 정상)
+              (모두 <strong style="color:var(--success);">예</strong>여야 정상)
             </span>
           </h4>
           <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.75rem;">
             아래 수칙을 숙지하고 동의(예)했는지 확인합니다.
           </p>
           ${complianceIssues.length > 0
-            ? `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(239,68,68,0.12); border-left:3px solid #ef4444; border-radius:4px; font-size:0.85rem; color:#ef4444;">
+            ? `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:var(--danger-light); border-left:3px solid var(--danger); border-radius:4px; font-size:0.85rem; color:var(--danger);">
                 ⚠️ 미동의 항목 ${complianceIssues.length}개가 있습니다. 확인이 필요합니다.
                </div>`
-            : `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(16,185,129,0.1); border-left:3px solid #10b981; border-radius:4px; font-size:0.85rem; color:#10b981;">
+            : `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:var(--success-light); border-left:3px solid var(--success); border-radius:4px; font-size:0.85rem; color:var(--success);">
                 ✅ 모든 항목에 동의하였습니다.
                </div>`
           }
@@ -1060,11 +1095,11 @@ async function showApprovalDetail(id, mode = 'view') {
             actionsEl.style.display = 'block';
             actionsEl.innerHTML = `
               <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
-                <div style="display:flex; justify-content:space-between; align-items:center; background:#f9fafb; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--color-bg-layout); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
                   <span style="font-size:0.85rem; color:var(--text-secondary);">안내자 평가 (현재: <strong style="color:var(--text-main);">${data.fitness_status || '미선택'}</strong>)</span>
                   <button class="btn ${fitnessBtnClass}" style="padding:0.3rem 0.75rem; font-size:0.85rem;" onclick="submitFitnessChange('${toggleFitnessTo}')">${toggleFitnessBtnText}</button>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; background:#f9fafb; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--color-bg-layout); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
                   <span style="font-size:0.85rem; color:var(--text-secondary);">최종 결재 (현재: <strong style="color:var(--text-main);">${data.approval_status}</strong>)</span>
                   <button class="btn ${btnClass}" style="padding:0.3rem 0.75rem; font-size:0.85rem;" onclick="submitApproval('${toggleTo}')">${toggleBtnText}</button>
                 </div>
@@ -1784,13 +1819,15 @@ function renderLedgerTable() {
     
     // 적합/부적합 표시 (인쇄 시 색상이 나오려면 브라우저 옵션 설정 필요)
     const fitnessText = record.fitness_status === '적합' 
-      ? '<span style="color:#10b981; font-weight:600;">적합</span>' 
-      : record.fitness_status === '부적합' ? '<span style="color:#ef4444; font-weight:600;">부적합</span>' : '미선택';
+      ? '<span style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.1rem 0.4rem; font-size:0.7rem; font-weight:600;">적합</span>' 
+      : record.fitness_status === '부적합' 
+        ? '<span style="display:inline-block; background:#B91C1C; color:#fff; border:1.5px solid #B91C1C; border-radius:20px; padding:0.1rem 0.4rem; font-size:0.7rem; font-weight:600;">부적합</span>' 
+        : '미선택';
       
     // 승인/반려 표시
     const approvalText = record.approval_status === '승인'
-      ? '<span style="color:#10b981; font-weight:bold;">승인</span>'
-      : '<span style="color:#ef4444; font-weight:bold;">반려</span>';
+      ? '<span style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.1rem 0.4rem; font-size:0.7rem; font-weight:600;">승인</span>'
+      : '<span style="display:inline-block; background:#B91C1C; color:#fff; border:1.5px solid #B91C1C; border-radius:20px; padding:0.1rem 0.4rem; font-size:0.7rem; font-weight:600;">반려</span>';
 
     tr.innerHTML = `
       <td style="border:1px solid #000; padding:6px 4px;">${index + 1}</td>

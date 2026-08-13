@@ -8,44 +8,76 @@
    1. 구글 폰트 & 전역 CSS 변수(색상, 크기 등) 정의
    ========================================================= */
 :root {
-  /* 배경 색상 */
-  --bg-start: #0a0f1e;
-  --bg-end: #0d1b2a;
+  /* =========================================================
+     [디자인 시스템 v3.0 토큰]
+     ========================================================= */
+  
+  /* ── 1. Seed Tokens ── */
+  --seed-color-primary: #1F2328;
+  --seed-color-neutral: #1F2328;
+  --seed-color-accent: #305CDE;
+  --seed-color-success: #14A870;
+  --seed-color-warning: #F0B01C;
+  --seed-color-error: #E14B4B;
+  --seed-color-info: #305CDE;
+  
+  --seed-font-base: "Pretendard Variable", Pretendard, "Figtree", "Noto Sans SC", "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+  --seed-font-num: "Figtree", "Pretendard Variable", ui-monospace, sans-serif;
 
-  /* 카드/유리 효과 색상 */
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-hover: rgba(255, 255, 255, 0.07);
+  /* ── 2. Map Tokens (Neutral 12단 & Accent 6단) ── */
+  --neutral-0: #FFFFFF;
+  --neutral-50: #F7F8F9;
+  --neutral-100: #EEF0F2;
+  --neutral-200: #DEE2E6;
+  --neutral-300: #C5CBD1;
+  --neutral-400: #9DA5AF;
+  --neutral-500: #757F8A;
+  --neutral-600: #5A6470;
+  --neutral-700: #434B55;
+  --neutral-800: #2E343B;
+  --neutral-900: #1F2328;
+  --neutral-950: #14171A;
 
-  /* 주요 포인트 색상 (파란색 계열) */
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
-  --primary-light: rgba(59, 130, 246, 0.15);
-  --primary-glow: rgba(59, 130, 246, 0.3);
+  --color-accent-bg: #EEF3FE;
+  --color-accent-border: #D6E1FC;
+  --color-accent-hover: #5578E8;
+  --color-accent-active: #2A4EC0;
+  --color-accent-text: #24419E;
 
-  /* 강조 색상 (청록색) */
-  --accent: #06b6d4;
-  --accent-dark: #0891b2;
-  --accent-light: rgba(6, 182, 212, 0.15);
+  /* ── 3. Alias Tokens (Light Theme 기준) ── */
+  --color-text: var(--neutral-900);
+  --color-text-secondary: var(--neutral-500);
+  --color-text-tertiary: var(--neutral-400);
+  --color-text-disabled: var(--neutral-300);
 
-  /* 성공/경고/위험 색상 */
-  --success: #10b981;
-  --success-light: rgba(16, 185, 129, 0.15);
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --danger-light: rgba(239, 68, 68, 0.15);
+  --color-bg-layout: var(--neutral-50);
+  --color-bg-container: var(--neutral-0);
+  --color-bg-elevated: var(--neutral-0);
 
-  /* 텍스트 색상 */
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --color-border: var(--neutral-200);
+  --color-split: var(--neutral-100);
+
+  --color-link: var(--seed-color-accent);
+  --color-link-hover: var(--color-accent-hover);
+  --color-focus-ring: var(--seed-color-accent);
+
+  /* 상태별 연한 배경 (light tint) */
+  --success-light: rgba(20,168,112,0.15);
+  --danger-light: rgba(225,75,75,0.15);
+  --primary-light: rgba(59,130,246,0.1);
+  --warning-light: rgba(240,176,28,0.15);
+
+  /* 텍스트 색상 (구버전 맵핑) */
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-tertiary);
 
   /* 테두리/구분선 색상 */
   --border: rgba(255, 255, 255, 0.08);
-  --border-focus: rgba(59, 130, 246, 0.5);
+  --border-focus: var(--color-focus-ring);
 
   /* 폰트 */
-  --font: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font: var(--seed-font-base);
 
   /* 둥근 모서리 크기 */
   --radius-sm: 8px;
@@ -63,6 +95,29 @@
   --transition-slow: 0.35s ease;
 }
 
+/* ── 4. Dark Theme Alias Overrides ── */
+[data-theme="dark"] {
+  --color-text: rgba(255,255,255,.88);
+  --color-text-secondary: rgba(255,255,255,.55);
+  --color-text-tertiary: rgba(255,255,255,.38);
+  
+  --color-bg-layout: #1E293B;      /* 배경(바깥쪽)은 밝게 (Slate-800) */
+  --color-bg-container: #0F172A;   /* 카드/테이블(안쪽)은 어둡게 (Slate-900) */
+  --color-bg-elevated: #273449;    /* 드롭다운 등 떠있는 요소 */
+  
+  --color-border: rgba(255,255,255,.14);
+  --color-split: rgba(255,255,255,.08);
+  
+  /* 다크 배경에서 버튼/강조 표면 반전 (밝은 먹색 표면) */
+  --color-primary: var(--neutral-50);
+  --color-primary-text: var(--neutral-900);
+  
+  /* 파란색 계열도 대비 확보를 위해 밝게 반전 */
+  --color-accent: #7E9DF1;
+  --color-link: #7E9DF1;
+  --color-focus-ring: #7E9DF1;
+}
+
 /* =========================================================
    2. 브라우저 기본값 초기화 & 공통 설정
    ========================================================= */
@@ -78,8 +133,8 @@ html {
 
 body {
   font-family: var(--font);
-  background: var(--bg-start);
-  color: var(--text-primary);
+  background: var(--color-bg-layout);
+  color: var(--color-text);
   min-height: 100vh;
   line-height: 1.6;
   overflow-x: hidden;
@@ -94,9 +149,9 @@ body {
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(59,130,246,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,0.06) 0%, transparent 60%),
-    linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+    radial-gradient(ellipse 80% 50% at 20% 20%, var(--color-accent-bg) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, var(--color-success-bg) 0%, transparent 60%),
+    linear-gradient(135deg, var(--color-bg-layout) 0%, var(--color-bg-layout) 100%);
   pointer-events: none; /* 클릭 이벤트는 통과시킵니다 */
 }
 
@@ -333,7 +388,7 @@ body {
 .form-input {
   width: 100%;
   padding: 0.7rem 0.9rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-bg-container);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -368,8 +423,8 @@ body {
 
 /* 드롭다운 옵션의 배경 (어두운 배경에서도 읽히도록) */
 .form-select option {
-  background: #1e293b;
-  color: var(--text-primary);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
 }
 
 /* datetime-local 입력 필드 달력 아이콘 색상 */
@@ -390,6 +445,12 @@ body {
   flex-direction: column;
   gap: 1rem;
 }
+
+/* ── 브랜드 로고 반응형 스위칭 ── */
+.jt-logo img { height: 28px; width: auto; display: block; }
+.jt-logo .on-dark { display: none; }
+[data-theme="dark"] .jt-logo .on-light { display: none; }
+[data-theme="dark"] .jt-logo .on-dark { display: block; }
 
 /* =========================================================
    10. 버튼 스타일
@@ -493,6 +554,7 @@ body {
 /* =========================================================
    11. 검색 바
    ========================================================= */
+
 .search-bar {
   display: flex;
   align-items: center;
@@ -1094,45 +1156,45 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
-  border: 1.5px solid transparent;
+  border: 2px solid transparent;
 }
 
 /* '예' 버튼 기본 */
 .yn-yes {
-  background: rgba(239,68,68,0.1);
-  border-color: rgba(239,68,68,0.2);
-  color: var(--danger);
+  background: var(--success-light);
+  border-color: #047857; /* 진한 초록색 */
+  color: var(--success);
 }
 
 .yn-yes:hover {
-  background: rgba(239,68,68,0.2);
+  background: rgba(20,168,112,0.25);
 }
 
 /* '예' 버튼 선택됨 */
 .yn-yes.selected {
-  background: var(--danger);
-  border-color: var(--danger);
+  background: #047857; /* 진한 초록색 */
+  border-color: #047857;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(239,68,68,0.4);
+  box-shadow: 0 2px 8px rgba(4,120,87,0.4);
 }
 
 /* '아니오' 버튼 기본 */
 .yn-no {
-  background: rgba(16,185,129,0.1);
-  border-color: rgba(16,185,129,0.2);
-  color: var(--success);
+  background: var(--danger-light);
+  border-color: #B91C1C; /* 진한 붉은색 */
+  color: var(--danger);
 }
 
 .yn-no:hover {
-  background: rgba(16,185,129,0.2);
+  background: rgba(225,75,75,0.25);
 }
 
 /* '아니오' 버튼 선택됨 */
 .yn-no.selected {
-  background: var(--success);
-  border-color: var(--success);
+  background: #B91C1C; /* 진한 붉은색 */
+  border-color: #B91C1C;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(16,185,129,0.4);
+  box-shadow: 0 2px 8px rgba(185,28,28,0.4);
 }
 
 /* ── 동의 문구 박스 ── */
@@ -1293,9 +1355,14 @@ body {
 }
 
 .tag-pending {
+  display: inline-block;
   background: rgba(245,158,11,0.15);
   color: #fcd34d;
-  border: 1px solid rgba(245,158,11,0.2);
+  border: 1.5px solid rgba(245,158,11,0.4);
+  border-radius: 20px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  vertical-align: middle;
 }
 
 /* 반응형: 모바일에서 위자드 조정 */

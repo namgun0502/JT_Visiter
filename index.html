@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <!-- 모바일에서도 화면이 잘 보이도록 뷰포트 설정 -->
@@ -9,10 +9,11 @@
   <title>JT 방문자 관리 시스템</title>
   <meta name="description" content="JT 회사 외부 방문자 출입 등록, 위생 자가점검, 준수사항 동의, 안내자 확인을 포함한 방문자 관리 시스템" />
 
-  <!-- Google Fonts: 한국어에 최적화된 Noto Sans KR 폰트 -->
+  <!-- Google Fonts & Pretendard: 다국어(한글/영문/숫자/중문) 최적화 폰트 묶음 (v3.0) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
 
   <!-- 서명 패드 라이브러리 (마우스/터치로 서명 가능) -->
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
@@ -106,9 +107,12 @@
 
     <!-- ===== 좌측 사이드바 ===== -->
     <aside class="app-sidebar">
-      <div class="sidebar-header">
-        <span class="logo-icon">🏢</span>
-        <h1 class="sidebar-title">방문자 관리</h1>
+      <div class="sidebar-header" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+        <span class="jt-logo">
+          <img src="./brand/logo/logo-h.svg"       alt="Janytree" class="on-light">
+          <img src="./brand/logo/logo-h-light.svg" alt="Janytree" class="on-dark" aria-hidden="true">
+        </span>
+        <h1 class="sidebar-title" style="font-size: 1rem; color: var(--text-secondary); margin-left: 2px; margin-top: 4px;">방문자 출입 관리</h1>
       </div>
       <nav class="sidebar-nav" role="tablist">
         <button class="nav-btn active" id="tab-register-btn" role="tab" aria-selected="true" onclick="switchTab('register')">
@@ -527,9 +531,9 @@
             <div id="archive-container">
               <!-- 보관함 전용 필터 -->
               <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
-                <button class="btn btn-primary" id="filter-all" onclick="loadArchiveApprovals('all')" style="border-radius:20px; padding:0.4rem 1rem;">전체</button>
-                <button class="btn btn-ghost" id="filter-approved" onclick="loadArchiveApprovals('승인')" style="border-radius:20px; padding:0.4rem 1rem;">적합 (승인)</button>
-                <button class="btn btn-ghost" id="filter-rejected" onclick="loadArchiveApprovals('반려')" style="border-radius:20px; padding:0.4rem 1rem;">부적합 (반려)</button>
+                <button class="btn btn-primary" id="filter-all" onclick="loadArchiveApprovals('all')" style="border-radius:20px; padding:0.4rem 1rem; background:rgba(255,255,255,0.05); color:var(--text-primary); border:1.5px solid rgba(255,255,255,0.2);">전체</button>
+                <button class="btn btn-ghost" id="filter-approved" onclick="loadArchiveApprovals('승인')" style="border-radius:20px; padding:0.4rem 1rem; background:var(--success-light); color:var(--success); border:1.5px solid var(--success);">적합 (승인)</button>
+                <button class="btn btn-ghost" id="filter-rejected" onclick="loadArchiveApprovals('반려')" style="border-radius:20px; padding:0.4rem 1rem; background:var(--danger-light); color:var(--danger); border:1.5px solid var(--danger);">부적합 (반려)</button>
               </div>
               
               <div class="loading-state" id="archive-loading" style="display:none;">
@@ -575,9 +579,12 @@
           </div>
 
           <!-- 실제 인쇄될 영역 -->
-          <div id="printable-ledger" class="printable-area card" style="margin-top:1rem; padding: 2rem; overflow-x: auto;">
-            <div class="ledger-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem;">
-              <h1 style="font-size: 24px; font-weight: 700; margin: 0; color:#000;">방문자 출입 관리대장</h1>
+          <div id="printable-ledger" class="printable-area card" style="margin-top:1rem; padding: 2rem; overflow-x: auto; background: #fff;">
+            <div class="ledger-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:2rem;">
+              <div style="display: flex; align-items: center; gap: 1.25rem; padding-bottom: 4px;">
+                <img src="./brand/logo/logo-h.svg" alt="Janytree" style="height: 44px; width: auto;">
+                <h1 style="font-size: 30px; font-weight: 800; margin: 0; color:#000; letter-spacing: -0.5px;">방문자 출입 관리대장</h1>
+              </div>
               <table class="approval-block" style="border-collapse:collapse; text-align:center; font-size:12px; color:#000;">
                 <tr>
                   <td rowspan="2" style="border:1px solid #000; width:25px; font-weight:bold; background:#f3f4f6;">결<br><br>재</td>
