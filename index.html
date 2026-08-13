@@ -23,9 +23,9 @@
   <!-- 대장 인쇄 전용 CSS -->
   <style>
     @media print {
-      /* 브라우저 기본 여백 없애기 및 가로(Landscape) 방향 강제 */
+      /* 세로(Portrait) 방향 강제 */
       @page {
-        size: landscape;
+        size: A4 portrait;
         margin: 10mm;
       }
       
@@ -63,13 +63,24 @@
         overflow: visible !important; /* 인쇄 시 잘림 방지 */
       }
       
-      /* 테이블 최소 너비 해제하여 화면에 맞춤 */
+      /* 세로 A4에 맞게 테이블 축소 조정 */
+      .ledger-header h1 { font-size: 20px !important; }
+      .approval-block { font-size: 11px !important; }
+      .approval-block td { padding: 2px !important; }
+      
       .ledger-table {
         min-width: auto !important;
         width: 100% !important;
+        font-size: 11px !important; /* 글씨 작게 */
+        word-break: keep-all; /* 단어 단위로 줄바꿈 */
+      }
+      
+      .ledger-table th, .ledger-table td {
+        padding: 4px 2px !important; /* 여백 대폭 축소 */
+        overflow-wrap: break-word;
       }
 
-      /* 모든 탭 패널 중 출력할 패널만 보이게 함 (만약을 대비) */
+      /* 모든 탭 패널 중 출력할 패널만 보이게 함 */
       .tab-panel {
         display: none !important;
       }
