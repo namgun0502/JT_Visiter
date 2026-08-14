@@ -262,6 +262,18 @@ function clearSignature(who) {
   if (who === 'guide' && guideSigPad) guideSigPad.clear();
 }
 
+// 서명 되돌리기(Undo) 버튼 클릭 시 호출됩니다
+function undoSignature(who) {
+  const pad = who === 'visitor' ? visitorSigPad : guideSigPad;
+  if (pad) {
+    const data = pad.toData();
+    if (data && data.length > 0) {
+      data.pop(); // 마지막 획 제거
+      pad.fromData(data);
+    }
+  }
+}
+
 // =====================================================================
 // 8. 위자드 단계 이동
 // =====================================================================

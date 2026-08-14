@@ -403,7 +403,10 @@
               <label class="form-label">방문자 서명 <span class="required">*</span></label>
               <div class="signature-container">
                 <canvas id="visitor-signature-canvas" class="signature-canvas"></canvas>
-                <button type="button" class="signature-clear-btn" onclick="clearSignature('visitor')">서명 지우기</button>
+                <div style="display: flex; gap: 0.5rem; align-self: flex-end;">
+                  <button type="button" class="signature-clear-btn" style="align-self: auto;" onclick="undoSignature('visitor')">되돌리기</button>
+                  <button type="button" class="signature-clear-btn" style="align-self: auto;" onclick="clearSignature('visitor')">지우기</button>
+                </div>
               </div>
             </div>
 
@@ -452,7 +455,10 @@
               <label class="form-label">안내자 서명 <span class="required">*</span></label>
               <div class="signature-container">
                 <canvas id="guide-signature-canvas" class="signature-canvas"></canvas>
-                <button type="button" class="signature-clear-btn" onclick="clearSignature('guide')">서명 지우기</button>
+                <div style="display: flex; gap: 0.5rem; align-self: flex-end;">
+                  <button type="button" class="signature-clear-btn" style="align-self: auto;" onclick="undoSignature('guide')">되돌리기</button>
+                  <button type="button" class="signature-clear-btn" style="align-self: auto;" onclick="clearSignature('guide')">지우기</button>
+                </div>
               </div>
             </div>
 
