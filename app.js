@@ -2046,6 +2046,16 @@ async function loadTrash(filter = 'all') {
            originBadge = '<span class="tag" style="background:#F59E0B; color:#fff; border:1px solid #F59E0B; border-radius:9999px; padding:0.2rem 0.6rem; margin-left:0.5rem; font-size:0.8rem;">보관함에서 삭제됨</span>';
         }
         
+        let actionBtns = '';
+        if (currentUser && currentUser.role === '승인자') {
+          actionBtns = `
+            <button class="btn btn-secondary btn-sm" onclick="restoreRecord('${record.id}')">♻️ 복구</button>
+            <button class="btn btn-danger btn-sm" onclick="hardDeleteRecord('${record.id}')">영구 삭제</button>
+          `;
+        } else {
+          actionBtns = `<span style="font-size:0.85rem; color:var(--text-muted);">* 승인자 권한으로 로그인시 복구/삭제 가능</span>`;
+        }
+
         const card = document.createElement('div');
         card.className = 'record-card';
         card.innerHTML = `
@@ -2058,8 +2068,7 @@ async function loadTrash(filter = 'all') {
             <p><strong>삭제자:</strong> ${record.deleted_by || '알 수 없음'}</p>
           </div>
           <div class="record-actions" style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
-            <button class="btn btn-secondary btn-sm" onclick="restoreRecord('${record.id}')">♻️ 복구</button>
-            <button class="btn btn-danger btn-sm" onclick="hardDeleteRecord('${record.id}')">영구 삭제</button>
+            ${actionBtns}
           </div>
         `;
         list.appendChild(card);
@@ -2075,6 +2084,10 @@ async function loadTrash(filter = 'all') {
 
 // --- 휴지통 복구 함수 ---
 async function restoreRecord(id) {
+  if (!currentUser || currentUser.role !== '승인자') {
+    showToast('승인자 권한이 필요합니다.', 'error');
+    return;
+  }
   if (!confirm('이 문서를 휴지통에서 복구하시겠습니까?')) return;
   
   try {
@@ -2096,7 +2109,11 @@ async function restoreRecord(id) {
 
 // --- 휴지통 영구 삭제 함수 ---
 async function hardDeleteRecord(id) {
-  if (!confirm('영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin' && currentUser.role !== '승인자')) {
+    showToast('승인자 권한이 필요합니다.', 'error');
+    return;
+  }
+  if (!confirm('정말 이 문서를 영구 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
   
   try {
     const { error } = await db.from('visitors').delete().eq('id', id);
