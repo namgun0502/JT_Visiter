@@ -576,11 +576,41 @@
               <h2 class="card-title"><span class="card-icon">🗑️</span> 휴지통</h2>
               <p class="card-desc">삭제된 문서를 보관합니다. 7일 후에는 영구 삭제됩니다.</p>
               
+              <style>
+                .trash-filter-btn {
+                  border-radius: 9999px;
+                  padding: 0.4rem 1rem;
+                  font-size: 0.9rem;
+                  font-weight: 500;
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  opacity: 0.4;
+                }
+                .trash-filter-btn.active {
+                  opacity: 1;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                }
+                .trash-filter-btn[data-trash-filter="all"] {
+                  background: #000000;
+                  color: #ffffff;
+                  border: 1.5px solid #000000;
+                }
+                .trash-filter-btn[data-trash-filter="pending"] {
+                  background: #10B981; /* 초록색 */
+                  color: #ffffff;
+                  border: 1.5px solid #10B981;
+                }
+                .trash-filter-btn[data-trash-filter="archive"] {
+                  background: #F59E0B; /* 노랑(주황)색 */
+                  color: #ffffff;
+                  border: 1.5px solid #F59E0B;
+                }
+              </style>
               <div class="filter-controls" style="margin-top: 1rem;">
-                <div class="filter-group">
-                  <button class="filter-btn active" data-trash-filter="all" onclick="loadTrash('all')">전체</button>
-                  <button class="filter-btn" data-trash-filter="pending" onclick="loadTrash('pending')">결재승인 (대기)</button>
-                  <button class="filter-btn" data-trash-filter="archive" onclick="loadTrash('archive')">보관함 (결재완료)</button>
+                <div class="filter-group" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                  <button class="trash-filter-btn active" data-trash-filter="all" onclick="loadTrash('all')">전체</button>
+                  <button class="trash-filter-btn" data-trash-filter="pending" onclick="loadTrash('pending')">결재승인 (대기)</button>
+                  <button class="trash-filter-btn" data-trash-filter="archive" onclick="loadTrash('archive')">보관함 (결재완료)</button>
                 </div>
               </div>
             </div>
