@@ -129,6 +129,11 @@
           <span class="nav-icon">📁</span>
           <span class="nav-text">보관함</span>
         </button>
+        <!-- 휴지통 탭 -->
+        <button class="nav-btn" id="tab-trash-btn" role="tab" aria-selected="false" onclick="switchTab('trash')">
+          <span class="nav-icon">🗑️</span>
+          <span class="nav-text">휴지통</span>
+        </button>
         <!-- 관리대장 탭 -->
         <button class="nav-btn" id="tab-ledger-btn" role="tab" aria-selected="false" onclick="switchTab('ledger')">
           <span class="nav-icon">🖨️</span>
@@ -552,6 +557,31 @@
               </div>
               <div class="approval-list" id="archive-list">
                 <!-- JS에서 보관함 카드가 동적으로 추가됩니다 -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 휴지통 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-trash" role="tabpanel" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">🗑️</span> 휴지통</h2>
+              <p class="card-desc">삭제된 문서를 보관합니다. 7일 후에는 영구 삭제됩니다.</p>
+            </div>
+            <div id="trash-container">
+              <div class="loading-state" id="trash-loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>휴지통 목록을 불러오는 중...</p>
+              </div>
+              <div class="empty-state" id="trash-empty" style="display:none;">
+                <span class="empty-icon">🗑️</span>
+                <p>휴지통이 비어 있습니다.</p>
+              </div>
+              <div class="approval-list" id="trash-list">
+                <!-- JS에서 휴지통 카드가 동적으로 추가됩니다 -->
               </div>
             </div>
           </div>

@@ -148,6 +148,9 @@ function switchTab(tabId) {
   if (tabId === 'archive') {
     loadArchiveApprovals();
   }
+  if (tabId === 'trash') {
+    loadTrash();
+  }
   if (tabId === 'ledger') {
     // 이번 달 1일부터 오늘까지를 기본 날짜로 설정
     const today = new Date();
@@ -547,10 +550,14 @@ async function handleSave() {
   saveBtn.innerHTML = '<span>저장 중...</span>';
 
   try {
-    // Supabase visitors 테이블에 데이터를 삽입합니다
-    const { error } = await db.from('visitors').insert([formData]);
+    // Supabase visitors 테이블에 데이터를 삽입하고 생성된 ID를 반환받습니다
+    const { data, error } = await db.from('visitors').insert([formData]).select();
 
     if (error) throw error;
+
+    if (data && data.length > 0) {
+      await logAction(data[0].id, 'CREATED', '방문자 정보 등록');
+    }
 
     showToast('✅ 방문자 등록이 완료되었습니다!', 'success');
     resetWizard();
@@ -693,6 +700,7 @@ async function loadPendingApprovals() {
       .from('visitors')
       .select('*')
       .eq('approval_status', '대기')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -818,6 +826,7 @@ async function loadArchiveApprovals(filter = 'all') {
     let query = db
       .from('visitors')
       .select('*')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (filter === 'all') {
@@ -873,7 +882,7 @@ async function loadArchiveApprovals(filter = 'all') {
                   ✏️ 상태 변경
                 </button>
                 <button class="btn btn-ghost" style="padding: 0 0.5rem; color:var(--danger);" title="삭제"
-                  onclick="deleteArchiveRecord('${record.id}')">
+                  onclick="softDeleteRecord('${record.id}')">
                   🗑️
                 </button>`
               : `<button class="btn btn-ghost" style="flex:1; min-width:120px; opacity:0.45; cursor:not-allowed;"
@@ -1081,9 +1090,14 @@ async function showApprovalDetail(id, mode = 'view') {
         </div>
 
       </div>
+      <!-- 타임라인 이력이 표시될 영역 -->
+      <div id="timeline-container"></div>
     `;
 
     document.getElementById('approval-modal').style.display = 'flex';
+    
+    // 타임라인 데이터 불러와서 채우기
+    renderTimeline(id, document.getElementById('timeline-container'));
 
     // ── 결재 버튼 및 상태 수정 버튼 제어 ──
     const actionsEl = document.getElementById('approval-modal-actions');
@@ -1175,11 +1189,16 @@ async function submitApproval(decision) {
     const { error } = await db
       .from('visitors')
       .update({
-        approval_status: decision
+        approval_status: decision,
+        approved_at: new Date().toISOString()
       })
       .eq('id', currentApprovalRecordId);
 
     if (error) throw error;
+    
+    // 이력 로깅
+    const actionEnum = decision === '승인' ? 'APPROVED' : 'REJECTED';
+    await logAction(currentApprovalRecordId, actionEnum, decision + ' 처리됨');
 
     showToast(`방문자가 성공적으로 ${decision} 처리되었습니다.`, 'success');
     closeApprovalModal();
@@ -1804,6 +1823,7 @@ async function loadLedger() {
       .select('*')
       // 승인 또는 반려 처리된 건만 가져옴 (결재 완료된 건)
       .in('approval_status', ['승인', '반려'])
+      .is('deleted_at', null)
       .gte('visit_date', startDate)
       .lte('visit_date', endDate)
       .order('visit_date', { ascending: true })
