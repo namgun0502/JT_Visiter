@@ -2047,7 +2047,7 @@ async function loadTrash(filter = 'all') {
         }
         
         let actionBtns = '';
-        if (currentUser && currentUser.role === '승인자') {
+        if (currentUser && (currentUser.role === '승인자' || currentUser.role === '안내자+승인자')) {
           actionBtns = `
             <button class="btn btn-secondary btn-sm" onclick="restoreRecord('${record.id}')">♻️ 복구</button>
             <button class="btn btn-danger btn-sm" onclick="hardDeleteRecord('${record.id}')">영구 삭제</button>
@@ -2084,7 +2084,7 @@ async function loadTrash(filter = 'all') {
 
 // --- 휴지통 복구 함수 ---
 async function restoreRecord(id) {
-  if (!currentUser || currentUser.role !== '승인자') {
+  if (!currentUser || (currentUser.role !== '승인자' && currentUser.role !== '안내자+승인자')) {
     showToast('승인자 권한이 필요합니다.', 'error');
     return;
   }
@@ -2109,7 +2109,7 @@ async function restoreRecord(id) {
 
 // --- 휴지통 영구 삭제 함수 ---
 async function hardDeleteRecord(id) {
-  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin' && currentUser.role !== '승인자')) {
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin' && currentUser.role !== '승인자' && currentUser.role !== '안내자+승인자')) {
     showToast('승인자 권한이 필요합니다.', 'error');
     return;
   }
