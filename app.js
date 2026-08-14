@@ -1796,6 +1796,9 @@ function loginSuccess(emp) {
   
   document.getElementById('auth-name').value = '';
   document.getElementById('auth-password').value = '';
+  
+  // 로그인 성공 시 현재 활성화된 탭 새로고침 (권한 버튼 즉시 렌더링)
+  reloadActiveTab();
 }
 
 function logout() {
@@ -1803,10 +1806,34 @@ function logout() {
   updateAuthUI();
   showToast('로그아웃 되었습니다.', 'success');
   
-  // 결재 승인 탭에 있다면 방문자 등록 탭으로 쫓아내기
+  // 로그아웃 시 현재 활성화된 탭 새로고침 (권한 버튼 즉시 숨김)
+  reloadActiveTab();
+  
+  // 결재 승인 탭에 있다면 방문자 등록 탭으로 쫓아내기 (사용자 요청에 따라 유지하거나 쫓아내거나 선택할 수 있으나, 위쪽에서 reloadActiveTab을 했으므로 안전함. 기존 쫓아내기 로직 유지)
   const approvalPanel = document.getElementById('tab-approval');
   if (approvalPanel && approvalPanel.classList.contains('active')) {
     switchTab('register');
+  }
+}
+
+// 현재 활성화된 탭의 데이터를 다시 불러오는 헬퍼 함수
+function reloadActiveTab() {
+  const activeTabBtn = document.querySelector('.nav-btn.active');
+  if (activeTabBtn) {
+    const tabId = activeTabBtn.id.replace('tab-', '').replace('-btn', '');
+    if (tabId === 'approval') loadPendingApprovals();
+    else if (tabId === 'archive') {
+      // archive는 필터 상태를 유지하기 위해 버튼 active 상태 확인
+      const activeFilterBtn = document.querySelector('#archive-container .btn-primary');
+      if(activeFilterBtn) activeFilterBtn.click();
+      else loadArchiveApprovals();
+    }
+    else if (tabId === 'trash') {
+      const activeTrashFilterBtn = document.querySelector('.trash-filter-btn.active');
+      const filter = activeTrashFilterBtn ? activeTrashFilterBtn.dataset.trashFilter : 'all';
+      loadTrash(filter);
+    }
+    else if (tabId === 'audit') loadAuditLog();
   }
 }
 
@@ -2010,16 +2037,16 @@ async function loadTrash(filter = 'all') {
         
         let originBadge = '';
         if (record.approval_status === '대기') {
-           originBadge = '<span class="tag" style="background:#F59E0B; color:#fff; margin-left:0.5rem;">대기열에서 삭제됨</span>';
+           originBadge = '<span class="tag" style="background:#10B981; color:#fff; border:1px solid #10B981; border-radius:9999px; padding:0.2rem 0.6rem; margin-left:0.5rem; font-size:0.8rem;">대기열에서 삭제됨</span>';
         } else {
-           originBadge = '<span class="tag" style="background:#3B82F6; color:#fff; margin-left:0.5rem;">보관함에서 삭제됨</span>';
+           originBadge = '<span class="tag" style="background:#F59E0B; color:#fff; border:1px solid #F59E0B; border-radius:9999px; padding:0.2rem 0.6rem; margin-left:0.5rem; font-size:0.8rem;">보관함에서 삭제됨</span>';
         }
         
         const card = document.createElement('div');
         card.className = 'record-card';
         card.innerHTML = `
           <div class="record-header">
-            <h3 class="record-name">${record.visitor_name || '이름 없음'} <span class="tag" style="background:#4B5563; color:#fff;">삭제됨</span>${originBadge}</h3>
+            <h3 class="record-name">${record.visitor_name || '이름 없음'} <span class="tag" style="background:#000000; color:#fff; border:1px solid #000000; border-radius:9999px; padding:0.2rem 0.6rem; font-size:0.8rem;">삭제됨</span>${originBadge}</h3>
             <span class="record-date">${deletedAt} 삭제</span>
           </div>
           <div class="record-info">
