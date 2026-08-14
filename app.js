@@ -749,6 +749,13 @@ async function loadPendingApprovals() {
                   🔒 결재 (권한없음)
                 </button>`
             }
+            ${canApprove
+              ? `<button class="btn btn-ghost" style="padding: 0 0.5rem; color:var(--danger);" title="삭제"
+                  onclick="softDeleteRecord('${record.id}')">
+                  🗑️
+                </button>`
+              : ``
+            }
           </div>
         `;
         list.appendChild(card);
@@ -1932,4 +1939,204 @@ function exportToCSV() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+// --- 타임라인 이력 로깅 함수 ---
+async function logAction(visitorId, action, remarks = null) {
+  try {
+    const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : '시스템/알수없음';
+    await db.from('visitor_logs').insert([{
+      visitor_id: visitorId,
+      action: action,
+      actor_name: actorName,
+      remarks: remarks
+    }]);
+  } catch (err) {
+    console.error('이력 저장 오류:', err);
+  }
+}
+
+// --- 휴지통 데이터 로드 함수 ---
+async function loadTrash() {
+  const loading = document.getElementById('trash-loading');
+  const empty = document.getElementById('trash-empty');
+  const list = document.getElementById('trash-list');
+
+  if (!loading || !empty || !list) return;
+
+  loading.style.display = 'flex';
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  try {
+    // 7일이 지난 데이터는 조회 시 배제 (나중에 배치로 DB에서 삭제하거나 여기서 안 보이게 함)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const { data, error } = await db
+      .from('visitors')
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .gte('deleted_at', sevenDaysAgo.toISOString())
+      .order('deleted_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (data.length === 0) {
+      empty.style.display = 'flex';
+    } else {
+      data.forEach(record => {
+        const deletedAt = new Date(record.deleted_at).toLocaleString('ko-KR');
+        const card = document.createElement('div');
+        card.className = 'record-card';
+        card.innerHTML = `
+          <div class="record-header">
+            <h3 class="record-name">${record.visitor_name || '이름 없음'} <span class="tag" style="background:#4B5563; color:#fff;">삭제됨</span></h3>
+            <span class="record-date">${deletedAt} 삭제</span>
+          </div>
+          <div class="record-info">
+            <p><strong>방문일:</strong> ${record.visit_date} ${record.visit_time || ''}</p>
+            <p><strong>삭제자:</strong> ${record.deleted_by || '알 수 없음'}</p>
+          </div>
+          <div class="record-actions" style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="restoreRecord('${record.id}')">♻️ 복구</button>
+            <button class="btn btn-danger btn-sm" onclick="hardDeleteRecord('${record.id}')">영구 삭제</button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+  } catch (err) {
+    console.error('휴지통 로드 오류:', err);
+    showToast('휴지통 목록을 불러오지 못했습니다.', 'error');
+  } finally {
+    loading.style.display = 'none';
+  }
+}
+
+// --- 휴지통 복구 함수 ---
+async function restoreRecord(id) {
+  if (!confirm('이 문서를 휴지통에서 복구하시겠습니까?')) return;
+  
+  try {
+    const { error } = await db.from('visitors').update({
+      deleted_at: null,
+      deleted_by: null
+    }).eq('id', id);
+
+    if (error) throw error;
+    
+    await logAction(id, 'RESTORED', '휴지통에서 복구됨');
+    showToast('성공적으로 복구되었습니다.', 'success');
+    loadTrash();
+  } catch (err) {
+    console.error('복구 오류:', err);
+    showToast('복구 처리 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+// --- 휴지통 영구 삭제 함수 ---
+async function hardDeleteRecord(id) {
+  if (!confirm('영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  
+  try {
+    const { error } = await db.from('visitors').delete().eq('id', id);
+    if (error) throw error;
+    
+    showToast('영구 삭제되었습니다.', 'success');
+    loadTrash();
+  } catch (err) {
+    console.error('영구 삭제 오류:', err);
+    showToast('영구 삭제 처리 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+// --- Soft Delete (휴지통 보내기) 함수 ---
+async function softDeleteRecord(id) {
+  // 권한 체크: 승인자(admin, superadmin, 승인자) 권한인지 확인
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin' && currentUser.role !== '승인자' && currentUser.role !== '안내자+승인자')) {
+    showToast('삭제 권한이 없습니다.', 'error');
+    return;
+  }
+
+  if (!confirm('이 문서를 삭제하시겠습니까? (휴지통으로 이동하며 7일 후 영구 삭제됩니다)')) return;
+
+  try {
+    const actor = currentUser ? `${currentUser.name} (${currentUser.role})` : '알수없음';
+    const { error } = await db.from('visitors').update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: actor
+    }).eq('id', id);
+
+    if (error) throw error;
+
+    await logAction(id, 'DELETED', '휴지통으로 이동됨');
+    showToast('문서가 휴지통으로 이동되었습니다.', 'success');
+    
+    // 현재 열려있는 탭에 따라 목록 리프레시
+    loadPendingApprovals();
+    loadArchiveApprovals('all');
+  } catch (err) {
+    console.error('삭제 오류:', err);
+    showToast('삭제 처리 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+// --- 타임라인 이력 로드 및 렌더링 함수 ---
+async function renderTimeline(visitorId, containerEl) {
+  containerEl.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-secondary);">이력 로딩 중...</div>';
+  
+  try {
+    const { data, error } = await db.from('visitor_logs')
+      .select('*')
+      .eq('visitor_id', visitorId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      containerEl.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-secondary);">기록된 이력이 없습니다.</div>';
+      return;
+    }
+
+    let html = '<div class="timeline-container" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">';
+    html += '<h4 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-primary);">문서 이력 타임라인</h4>';
+    html += '<div class="timeline" style="position: relative; padding-left: 1.5rem;">';
+    
+    // 타임라인 세로선 (가상 요소 스타일링)
+    html += '<style>.timeline::before { content: ""; position: absolute; left: 0.45rem; top: 0; bottom: 0; width: 2px; background: var(--border-color); }</style>';
+
+    data.forEach(log => {
+      const date = new Date(log.created_at).toLocaleString('ko-KR');
+      let icon = '📝';
+      let actionText = log.action;
+      let color = 'var(--text-secondary)';
+
+      if (log.action === 'CREATED') { icon = '📝'; actionText = '문서 작성'; }
+      else if (log.action === 'APPROVED') { icon = '✅'; actionText = '결재 승인'; color = 'var(--success)'; }
+      else if (log.action === 'REJECTED') { icon = '❌'; actionText = '결재 반려'; color = 'var(--danger)'; }
+      else if (log.action === 'DELETED') { icon = '🗑️'; actionText = '삭제됨(휴지통)'; color = '#4B5563'; }
+      else if (log.action === 'RESTORED') { icon = '♻️'; actionText = '복구됨'; color = '#3B82F6'; }
+      else if (log.action === 'UPDATED') { icon = '✏️'; actionText = '내용 수정'; }
+
+      html += `
+        <div class="timeline-item" style="position: relative; margin-bottom: 1rem;">
+          <div class="timeline-icon" style="position: absolute; left: -1.5rem; top: 0; background: var(--bg-container); font-size: 0.9rem;">${icon}</div>
+          <div class="timeline-content" style="padding-left: 0.5rem;">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.2rem;">${date}</div>
+            <div style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">
+              <span style="color: ${color};">${actionText}</span> - ${log.actor_name}
+            </div>
+            ${log.remarks ? `<div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem; background: var(--bg-body); padding: 0.5rem; border-radius: 4px;">${log.remarks}</div>` : ''}
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div></div>';
+    containerEl.innerHTML = html;
+  } catch (err) {
+    console.error('타임라인 로드 오류:', err);
+    containerEl.innerHTML = '<div style="padding: 1rem; color: var(--danger);">이력을 불러오지 못했습니다.</div>';
+  }
 }
