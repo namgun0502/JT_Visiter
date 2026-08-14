@@ -1816,17 +1816,17 @@ function renderLedgerTable() {
     const purpose = record.visit_purpose || record.purpose || '';
     const guideName = record.guide_name || '';
     
-    // 적합/부적합 표시 (인쇄 시 색상이 나오려면 브라우저 옵션 설정 필요)
+    // 적합/부적합 표시 (인쇄 시 심플한 텍스트로 표시)
     const fitnessText = record.fitness_status === '적합' 
-      ? '<span style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.1rem 0.4rem; font-size:0.7rem; font-weight:600;">적합</span>' 
+      ? '<span style="color:#000;">적합</span>' 
       : record.fitness_status === '부적합' 
-        ? '<span style="display:inline-block; background:#B91C1C; color:#fff; border:1.5px solid #B91C1C; border-radius:20px; padding:0.1rem 0.4rem; font-size:0.7rem; font-weight:600;">부적합</span>' 
-        : '미선택';
+        ? '<span style="color:#000;">부적합</span>' 
+        : '';
       
-    // 승인/반려 표시
+    // 승인/반려 표시 (인쇄 시 심플한 텍스트로 표시)
     const approvalText = record.approval_status === '승인'
-      ? '<span style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.1rem 0.4rem; font-size:0.7rem; font-weight:600;">승인</span>'
-      : '<span style="display:inline-block; background:#B91C1C; color:#fff; border:1.5px solid #B91C1C; border-radius:20px; padding:0.1rem 0.4rem; font-size:0.7rem; font-weight:600;">반려</span>';
+      ? '<span style="color:#000;">승인</span>'
+      : '<span style="color:#000;">반려</span>';
 
     tr.innerHTML = `
       <td style="border:1px solid #000; padding:6px 4px;">${index + 1}</td>
