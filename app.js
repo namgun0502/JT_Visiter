@@ -241,10 +241,20 @@ function initSignaturePads() {
     });
   }
 
-  // 창 크기가 바뀔 때 캔버스도 다시 조정합니다
+  // 창 크기가 바뀔 때(모바일 스크롤 포함) 캔버스를 다시 조정하면서 기존 서명 데이터 복구
   window.addEventListener('resize', () => {
-    if (visitorCanvas) resizeCanvas(visitorCanvas);
-    if (guideCanvas) resizeCanvas(guideCanvas);
+    if (visitorCanvas) {
+      let vData = null;
+      if (typeof visitorSigPad !== 'undefined' && visitorSigPad) vData = visitorSigPad.toData();
+      resizeCanvas(visitorCanvas);
+      if (vData && visitorSigPad) visitorSigPad.fromData(vData);
+    }
+    if (guideCanvas) {
+      let gData = null;
+      if (typeof guideSigPad !== 'undefined' && guideSigPad) gData = guideSigPad.toData();
+      resizeCanvas(guideCanvas);
+      if (gData && guideSigPad) guideSigPad.fromData(gData);
+    }
   });
 }
 
