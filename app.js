@@ -1957,10 +1957,19 @@ async function logAction(visitorId, action, remarks = null) {
 }
 
 // --- 휴지통 데이터 로드 함수 ---
-async function loadTrash() {
+async function loadTrash(filter = 'all') {
   const loading = document.getElementById('trash-loading');
   const empty = document.getElementById('trash-empty');
   const list = document.getElementById('trash-list');
+
+  // 필터 버튼 UI 업데이트
+  document.querySelectorAll('[data-trash-filter]').forEach(btn => {
+    if (btn.dataset.trashFilter === filter) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
 
   if (!loading || !empty || !list) return;
 
@@ -1973,12 +1982,20 @@ async function loadTrash() {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    const { data, error } = await db
+    let query = db
       .from('visitors')
       .select('*')
       .not('deleted_at', 'is', null)
       .gte('deleted_at', sevenDaysAgo.toISOString())
       .order('deleted_at', { ascending: false });
+
+    if (filter === 'pending') {
+      query = query.eq('approval_status', '대기');
+    } else if (filter === 'archive') {
+      query = query.neq('approval_status', '대기');
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -1987,11 +2004,19 @@ async function loadTrash() {
     } else {
       data.forEach(record => {
         const deletedAt = new Date(record.deleted_at).toLocaleString('ko-KR');
+        
+        let originBadge = '';
+        if (record.approval_status === '대기') {
+           originBadge = '<span class="tag" style="background:#F59E0B; color:#fff; margin-left:0.5rem;">대기열에서 삭제됨</span>';
+        } else {
+           originBadge = '<span class="tag" style="background:#3B82F6; color:#fff; margin-left:0.5rem;">보관함에서 삭제됨</span>';
+        }
+        
         const card = document.createElement('div');
         card.className = 'record-card';
         card.innerHTML = `
           <div class="record-header">
-            <h3 class="record-name">${record.visitor_name || '이름 없음'} <span class="tag" style="background:#4B5563; color:#fff;">삭제됨</span></h3>
+            <h3 class="record-name">${record.visitor_name || '이름 없음'} <span class="tag" style="background:#4B5563; color:#fff;">삭제됨</span>${originBadge}</h3>
             <span class="record-date">${deletedAt} 삭제</span>
           </div>
           <div class="record-info">

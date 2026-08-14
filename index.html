@@ -570,6 +570,14 @@
             <div class="card-header">
               <h2 class="card-title"><span class="card-icon">🗑️</span> 휴지통</h2>
               <p class="card-desc">삭제된 문서를 보관합니다. 7일 후에는 영구 삭제됩니다.</p>
+              
+              <div class="filter-controls" style="margin-top: 1rem;">
+                <div class="filter-group">
+                  <button class="filter-btn active" data-trash-filter="all" onclick="loadTrash('all')">전체</button>
+                  <button class="filter-btn" data-trash-filter="pending" onclick="loadTrash('pending')">결재승인 (대기)</button>
+                  <button class="filter-btn" data-trash-filter="archive" onclick="loadTrash('archive')">보관함 (결재완료)</button>
+                </div>
+              </div>
             </div>
             <div id="trash-container">
               <div class="loading-state" id="trash-loading" style="display:none;">
