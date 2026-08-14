@@ -134,6 +134,11 @@
           <span class="nav-icon">🗑️</span>
           <span class="nav-text">휴지통</span>
         </button>
+        <!-- 이력 관리 탭 -->
+        <button class="nav-btn" id="tab-audit-btn" role="tab" aria-selected="false" onclick="switchTab('audit')">
+          <span class="nav-icon">📜</span>
+          <span class="nav-text">이력 관리</span>
+        </button>
         <!-- 관리대장 탭 -->
         <button class="nav-btn" id="tab-ledger-btn" role="tab" aria-selected="false" onclick="switchTab('ledger')">
           <span class="nav-icon">🖨️</span>
@@ -590,6 +595,52 @@
               </div>
               <div class="approval-list" id="trash-list">
                 <!-- JS에서 휴지통 카드가 동적으로 추가됩니다 -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 이력 관리 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-audit" role="tabpanel" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">📜</span> 전체 이력 관리</h2>
+              <p class="card-desc">문서의 생성, 승인, 반려, 수정, 삭제 및 복구 등 시스템 내 모든 타임라인 이력을 조회합니다.</p>
+              
+              <div class="filter-controls" style="margin-top: 1rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <input type="date" id="audit-date-filter" class="form-input" style="width:140px; padding:0.4rem;" onchange="loadAuditLog()" title="날짜 필터" />
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('audit-date-filter').value=''; loadAuditLog();">전체 날짜 보기</button>
+                <button class="btn btn-primary btn-sm" onclick="loadAuditLog()" style="margin-left:auto;">🔄 새로고침</button>
+              </div>
+            </div>
+            
+            <div id="audit-container">
+              <div class="loading-state" id="audit-loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>이력을 불러오는 중...</p>
+              </div>
+              <div class="empty-state" id="audit-empty" style="display:none;">
+                <span class="empty-icon">📝</span>
+                <p>기록된 이력이 없습니다.</p>
+              </div>
+              
+              <div class="table-responsive" style="margin-top: 1rem;">
+                <table class="data-table" id="audit-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 15%">시간</th>
+                      <th style="width: 12%">작업</th>
+                      <th style="width: 18%">대상 방문자</th>
+                      <th style="width: 15%">작업자</th>
+                      <th style="width: 40%">상세 내용</th>
+                    </tr>
+                  </thead>
+                  <tbody id="audit-list">
+                    <!-- JS에서 동적 추가 -->
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

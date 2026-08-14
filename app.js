@@ -151,6 +151,9 @@ function switchTab(tabId) {
   if (tabId === 'trash') {
     loadTrash();
   }
+  if (tabId === 'audit') {
+    loadAuditLog();
+  }
   if (tabId === 'ledger') {
     // 이번 달 1일부터 오늘까지를 기본 날짜로 설정
     const today = new Date();
@@ -2163,5 +2166,80 @@ async function renderTimeline(visitorId, containerEl) {
   } catch (err) {
     console.error('타임라인 로드 오류:', err);
     containerEl.innerHTML = '<div style="padding: 1rem; color: var(--danger);">이력을 불러오지 못했습니다.</div>';
+  }
+}
+
+// --- 전체 이력 관리 데이터 로드 함수 ---
+async function loadAuditLog() {
+  const loading = document.getElementById('audit-loading');
+  const empty = document.getElementById('audit-empty');
+  const list = document.getElementById('audit-list');
+  const dateFilter = document.getElementById('audit-date-filter');
+
+  if (!loading || !empty || !list) return;
+
+  loading.style.display = 'block';
+  empty.style.display = 'none';
+  list.innerHTML = '';
+  document.getElementById('audit-table').parentElement.style.display = 'none';
+
+  try {
+    let query = db
+      .from('visitor_logs')
+      .select('*, visitors(visitor_name, visitor_company)')
+      .order('created_at', { ascending: false });
+
+    // 날짜 필터 적용
+    if (dateFilter && dateFilter.value) {
+      // 해당 날짜의 00:00:00 ~ 23:59:59 (KST 기준 처리를 위해 단순 문자열 결합)
+      const startOfDay = new Date(dateFilter.value + 'T00:00:00').toISOString();
+      const endOfDay = new Date(dateFilter.value + 'T23:59:59').toISOString();
+      query = query.gte('created_at', startOfDay).lte('created_at', endOfDay);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    if (data.length === 0) {
+      empty.style.display = 'flex';
+    } else {
+      document.getElementById('audit-table').parentElement.style.display = 'block';
+      data.forEach(log => {
+        const date = new Date(log.created_at).toLocaleString('ko-KR');
+        
+        let actionBadge = '';
+        if (log.action === 'CREATED') actionBadge = '<span class="tag" style="background:#4B5563; color:#fff;">등록</span>';
+        else if (log.action === 'APPROVED') actionBadge = '<span class="tag" style="background:#047857; color:#fff;">승인</span>';
+        else if (log.action === 'REJECTED') actionBadge = '<span class="tag" style="background:#B91C1C; color:#fff;">반려</span>';
+        else if (log.action === 'DELETED') actionBadge = '<span class="tag" style="background:#F59E0B; color:#fff;">삭제됨</span>';
+        else if (log.action === 'RESTORED') actionBadge = '<span class="tag" style="background:#3B82F6; color:#fff;">복구됨</span>';
+        else if (log.action === 'UPDATED') actionBadge = '<span class="tag" style="background:#6366F1; color:#fff;">수정됨</span>';
+        else actionBadge = `<span class="tag">${log.action}</span>`;
+
+        let targetName = '알 수 없음';
+        if (log.visitors) {
+          targetName = `${log.visitors.visitor_name || '이름 없음'} <span style="color:var(--text-muted); font-size:0.85rem;">(${log.visitors.visitor_company || '소속 없음'})</span>`;
+        } else {
+           // 방문자가 영구 삭제된 경우 visitors 조인이 null이 됨
+           targetName = '<span style="color:var(--danger); font-size:0.85rem;">[영구 삭제된 방문자]</span>';
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-size:0.85rem; color:var(--text-secondary);">${date}</td>
+          <td>${actionBadge}</td>
+          <td style="font-weight:500;">${targetName}</td>
+          <td>${log.actor_name}</td>
+          <td style="font-size:0.9rem; color:var(--text-secondary);">${log.remarks || ''}</td>
+        `;
+        list.appendChild(tr);
+      });
+    }
+  } catch (err) {
+    console.error('이력 관리 로드 오류:', err);
+    showToast('이력 정보를 불러오지 못했습니다.', 'error');
+  } finally {
+    loading.style.display = 'none';
   }
 }
