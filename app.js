@@ -57,14 +57,9 @@ let allRecords = [];
 // currentUser: 로그인한 직원 정보. 로그인 안 했으면 null
 let currentUser = null;
 
-// 페이지 로드 시 localStorage에서 이전 로그인 정보 복원 + 헤더 UI 갱신
+// 페이지 로드 시 항상 로그아웃 상태로 시작 + 헤더 UI 갱신 (새로고침 시 로그인 풀림)
 function initAuth() {
-  try {
-    const stored = localStorage.getItem('currentUser');
-    if (stored) currentUser = JSON.parse(stored);
-  } catch(e) {
-    currentUser = null;
-  }
+  currentUser = null;
   updateAuthUI();
 }
 
@@ -1744,7 +1739,7 @@ function loginSuccess(emp) {
     department: emp.department,
     title: emp.title
   };
-  localStorage.setItem('currentUser', JSON.stringify(currentUser));
+  // 새로고침 시 로그인이 풀리도록 localStorage 저장 생략
   closeAuthModal();
   updateAuthUI();
   
@@ -1754,7 +1749,6 @@ function loginSuccess(emp) {
 
 function logout() {
   currentUser = null;
-  localStorage.removeItem('currentUser');
   updateAuthUI();
   showToast('로그아웃 되었습니다.', 'success');
   
