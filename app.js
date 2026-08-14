@@ -1975,14 +1975,18 @@ function exportToCSV() {
 async function logAction(visitorId, action, remarks = null) {
   try {
     const actorName = currentUser ? `${currentUser.name} (${currentUser.role})` : '시스템/알수없음';
-    await db.from('visitor_logs').insert([{
+    const { error } = await db.from('visitor_logs').insert([{
       visitor_id: visitorId,
       action: action,
       actor_name: actorName,
       remarks: remarks
     }]);
+    
+    if (error) {
+      console.error('이력 저장 Supabase 오류:', error);
+    }
   } catch (err) {
-    console.error('이력 저장 오류:', err);
+    console.error('이력 저장 네트워크/런타임 오류:', err);
   }
 }
 
