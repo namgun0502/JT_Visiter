@@ -2174,7 +2174,8 @@ async function loadAuditLog() {
   const loading = document.getElementById('audit-loading');
   const empty = document.getElementById('audit-empty');
   const list = document.getElementById('audit-list');
-  const dateFilter = document.getElementById('audit-date-filter');
+  const startDateFilter = document.getElementById('audit-start-date');
+  const endDateFilter = document.getElementById('audit-end-date');
 
   if (!loading || !empty || !list) return;
 
@@ -2186,26 +2187,40 @@ async function loadAuditLog() {
   try {
     let query = db
       .from('visitor_logs')
-      .select('*, visitors(visitor_name, visitor_company)')
+      .select('*')
       .order('created_at', { ascending: false });
 
     // 날짜 필터 적용
-    if (dateFilter && dateFilter.value) {
-      // 해당 날짜의 00:00:00 ~ 23:59:59 (KST 기준 처리를 위해 단순 문자열 결합)
-      const startOfDay = new Date(dateFilter.value + 'T00:00:00').toISOString();
-      const endOfDay = new Date(dateFilter.value + 'T23:59:59').toISOString();
-      query = query.gte('created_at', startOfDay).lte('created_at', endOfDay);
+    if (startDateFilter && startDateFilter.value) {
+      const startOfDay = new Date(startDateFilter.value + 'T00:00:00').toISOString();
+      query = query.gte('created_at', startOfDay);
+    }
+    if (endDateFilter && endDateFilter.value) {
+      const endOfDay = new Date(endDateFilter.value + 'T23:59:59').toISOString();
+      query = query.lte('created_at', endOfDay);
     }
 
-    const { data, error } = await query;
+    const { data: logsData, error } = await query;
 
     if (error) throw error;
 
-    if (data.length === 0) {
+    if (logsData.length === 0) {
       empty.style.display = 'flex';
     } else {
       document.getElementById('audit-table').parentElement.style.display = 'block';
-      data.forEach(log => {
+      
+      // 방문자 기본 정보 매핑을 위해 visitor_id 추출 및 별도 조회 (Join 오류 방지)
+      const visitorIds = [...new Set(logsData.map(log => log.visitor_id))].filter(id => id);
+      
+      let visitorsMap = {};
+      if (visitorIds.length > 0) {
+        const { data: vData } = await db.from('visitors').select('id, visitor_name, visitor_company').in('id', visitorIds);
+        if (vData) {
+          vData.forEach(v => { visitorsMap[v.id] = v; });
+        }
+      }
+
+      logsData.forEach(log => {
         const date = new Date(log.created_at).toLocaleString('ko-KR');
         
         let actionBadge = '';
@@ -2218,10 +2233,11 @@ async function loadAuditLog() {
         else actionBadge = `<span class="tag">${log.action}</span>`;
 
         let targetName = '알 수 없음';
-        if (log.visitors) {
-          targetName = `${log.visitors.visitor_name || '이름 없음'} <span style="color:var(--text-muted); font-size:0.85rem;">(${log.visitors.visitor_company || '소속 없음'})</span>`;
+        const vInfo = visitorsMap[log.visitor_id];
+        if (vInfo) {
+          targetName = `${vInfo.visitor_name || '이름 없음'} <span style="color:var(--text-muted); font-size:0.85rem;">(${vInfo.visitor_company || '소속 없음'})</span>`;
         } else {
-           // 방문자가 영구 삭제된 경우 visitors 조인이 null이 됨
+           // 방문자가 영구 삭제된 경우
            targetName = '<span style="color:var(--danger); font-size:0.85rem;">[영구 삭제된 방문자]</span>';
         }
 

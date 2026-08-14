@@ -640,8 +640,11 @@
               <p class="card-desc">문서의 생성, 승인, 반려, 수정, 삭제 및 복구 등 시스템 내 모든 타임라인 이력을 조회합니다.</p>
               
               <div class="filter-controls" style="margin-top: 1rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                <input type="date" id="audit-date-filter" class="form-input" style="width:140px; padding:0.4rem;" onchange="loadAuditLog()" title="날짜 필터" />
-                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('audit-date-filter').value=''; loadAuditLog();">전체 날짜 보기</button>
+                <input type="date" id="audit-start-date" class="form-input" style="width:140px; padding:0.4rem;" onchange="loadAuditLog()" title="시작일" />
+                <span style="color:var(--text-secondary);">~</span>
+                <input type="date" id="audit-end-date" class="form-input" style="width:140px; padding:0.4rem;" onchange="loadAuditLog()" title="종료일" />
+                
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('audit-start-date').value=''; document.getElementById('audit-end-date').value=''; loadAuditLog();">초기화</button>
                 <button class="btn btn-primary btn-sm" onclick="loadAuditLog()" style="margin-left:auto;">🔄 새로고침</button>
               </div>
             </div>
