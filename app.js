@@ -85,6 +85,16 @@ function updateAuthUI() {
       </button>
     `;
   }
+
+  // 권한에 따른 관리자 탭 노출 제어
+  const adminTabBtn = document.getElementById('tab-admin-btn');
+  if (adminTabBtn) {
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
+      adminTabBtn.style.display = 'flex';
+    } else {
+      adminTabBtn.style.display = 'none';
+    }
+  }
 }
 
 // =====================================================================
@@ -1300,68 +1310,6 @@ async function getAdminPasswordHash() {
   }
 }
 
-// 관리자 버튼 클릭 시 비밀번호 모달 표시
-function checkAdminPassword() {
-  const modal = document.getElementById('admin-password-modal');
-  const input = document.getElementById('admin-password-input');
-  if (modal) {
-    modal.style.display = 'flex';
-    if (input) { input.value = ''; setTimeout(() => input.focus(), 100); }
-  }
-}
-
-// 비밀번호 확인 모달 닫기
-function closeAdminPasswordModal() {
-  const modal = document.getElementById('admin-password-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-// 비밀번호 제출 처리 (Supabase에서 해시값 비교)
-async function submitAdminPassword() {
-  const input = document.getElementById('admin-password-input');
-  const confirmBtn = document.querySelector('#admin-password-modal .btn-primary');
-  if (!input) return;
-
-  const pw = input.value;
-  if (!pw) { showToast('비밀번호를 입력해 주세요.', 'error'); return; }
-
-  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '확인 중...'; }
-
-  try {
-    const inputHash = await hashPassword(pw);
-    const storedHash = await getAdminPasswordHash();
-
-    // DB에 저장된 값이 'init'이거나 없으면 초기 상태 → 기본값 'admin1234'와 비교
-    let isCorrect = false;
-    if (!storedHash || storedHash === 'init') {
-      const defaultHash = await hashPassword('admin1234');
-      isCorrect = (inputHash === defaultHash);
-    } else {
-      isCorrect = (inputHash === storedHash);
-    }
-
-    if (isCorrect) {
-      closeAdminPasswordModal();
-      switchTab('admin');
-      document.querySelectorAll('.nav-btn').forEach(b => {
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-      const adminBtn = document.getElementById('tab-admin-btn');
-      if (adminBtn) { adminBtn.classList.add('active'); adminBtn.setAttribute('aria-selected', 'true'); }
-      showToast('관리자 페이지에 접속했습니다.', 'success');
-    } else {
-      showToast('비밀번호가 올바르지 않습니다.', 'error');
-      input.value = '';
-      input.focus();
-    }
-  } catch (err) {
-    console.error('비밀번호 확인 오류:', err);
-    showToast('오류가 발생했습니다. 다시 시도해 주세요.', 'error');
-  } finally {
-    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '🔓 확인'; }
-  }
-}
 
 // 관리자 비밀번호 변경 (SHA-256 해시 후 Supabase에 저장)
 async function changeAdminPassword() {
@@ -1816,6 +1764,7 @@ function logout() {
   }
 }
 
+
 // 현재 활성화된 탭의 데이터를 다시 불러오는 헬퍼 함수
 function reloadActiveTab() {
   const activeTabBtn = document.querySelector('.nav-btn.active');
@@ -2088,23 +2037,24 @@ async function restoreRecord(id) {
     showToast('승인자 권한이 필요합니다.', 'error');
     return;
   }
-  if (!confirm('이 문서를 휴지통에서 복구하시겠습니까?')) return;
   
-  try {
-    const { error } = await db.from('visitors').update({
-      deleted_at: null,
-      deleted_by: null
-    }).eq('id', id);
+  showCustomConfirm('문서 복구', '이 문서를 휴지통에서 복구하시겠습니까?', async () => {
+    try {
+      const { error } = await db.from('visitors').update({
+        deleted_at: null,
+        deleted_by: null
+      }).eq('id', id);
 
-    if (error) throw error;
-    
-    await logAction(id, 'RESTORED', '휴지통에서 복구됨');
-    showToast('성공적으로 복구되었습니다.', 'success');
-    loadTrash();
-  } catch (err) {
-    console.error('복구 오류:', err);
-    showToast('복구 처리 중 오류가 발생했습니다.', 'error');
-  }
+      if (error) throw error;
+      
+      await logAction(id, 'RESTORED', '휴지통에서 복구됨');
+      showToast('성공적으로 복구되었습니다.', 'success');
+      loadTrash();
+    } catch (err) {
+      console.error('복구 오류:', err);
+      showToast('복구 처리 중 오류가 발생했습니다.', 'error');
+    }
+  });
 }
 
 // --- 휴지통 영구 삭제 함수 ---
@@ -2113,49 +2063,50 @@ async function hardDeleteRecord(id) {
     showToast('승인자 권한이 필요합니다.', 'error');
     return;
   }
-  if (!confirm('정말 이 문서를 영구 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
   
-  try {
-    const { error } = await db.from('visitors').delete().eq('id', id);
-    if (error) throw error;
-    
-    showToast('영구 삭제되었습니다.', 'success');
-    loadTrash();
-  } catch (err) {
-    console.error('영구 삭제 오류:', err);
-    showToast('영구 삭제 처리 중 오류가 발생했습니다.', 'error');
-  }
+  showCustomConfirm('영구 삭제', '정말 이 문서를 영구 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.', async () => {
+    try {
+      const { error } = await db.from('visitors').delete().eq('id', id);
+      if (error) throw error;
+      
+      showToast('영구 삭제되었습니다.', 'success');
+      loadTrash();
+    } catch (err) {
+      console.error('영구 삭제 오류:', err);
+      showToast('영구 삭제 처리 중 오류가 발생했습니다.', 'error');
+    }
+  });
 }
 
 // --- Soft Delete (휴지통 보내기) 함수 ---
 async function softDeleteRecord(id) {
-  // 권한 체크: 승인자(admin, superadmin, 승인자) 권한인지 확인
+  // 권한 체크: 승인자(admin, superadmin, 승인자, 안내자+승인자) 권한인지 확인
   if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin' && currentUser.role !== '승인자' && currentUser.role !== '안내자+승인자')) {
     showToast('삭제 권한이 없습니다.', 'error');
     return;
   }
 
-  if (!confirm('이 문서를 삭제하시겠습니까? (휴지통으로 이동하며 7일 후 영구 삭제됩니다)')) return;
+  showCustomConfirm('문서 삭제', '이 문서를 삭제하시겠습니까?\n(휴지통으로 이동하며 7일 후 영구 삭제됩니다)', async () => {
+    try {
+      const actor = currentUser ? `${currentUser.name} (${currentUser.role})` : '알수없음';
+      const { error } = await db.from('visitors').update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: actor
+      }).eq('id', id);
 
-  try {
-    const actor = currentUser ? `${currentUser.name} (${currentUser.role})` : '알수없음';
-    const { error } = await db.from('visitors').update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: actor
-    }).eq('id', id);
+      if (error) throw error;
 
-    if (error) throw error;
-
-    await logAction(id, 'DELETED', '휴지통으로 이동됨');
-    showToast('문서가 휴지통으로 이동되었습니다.', 'success');
-    
-    // 현재 열려있는 탭에 따라 목록 리프레시
-    loadPendingApprovals();
-    loadArchiveApprovals('all');
-  } catch (err) {
-    console.error('삭제 오류:', err);
-    showToast('삭제 처리 중 오류가 발생했습니다.', 'error');
-  }
+      await logAction(id, 'DELETED', '휴지통으로 이동됨');
+      showToast('문서가 휴지통으로 이동되었습니다.', 'success');
+      
+      // 현재 열려있는 탭에 따라 목록 리프레시
+      loadPendingApprovals();
+      loadArchiveApprovals('all');
+    } catch (err) {
+      console.error('삭제 오류:', err);
+      showToast('삭제 처리 중 오류가 발생했습니다.', 'error');
+    }
+  });
 }
 
 // --- 타임라인 이력 로드 및 렌더링 함수 ---
@@ -2306,4 +2257,29 @@ async function loadAuditLog() {
   } finally {
     loading.style.display = 'none';
   }
+}
+
+// --- 커스텀 Confirm 기능 ---
+let customConfirmCallback = null;
+
+function showCustomConfirm(title, message, callback) {
+  const modal = document.getElementById('custom-confirm-modal');
+  document.getElementById('custom-confirm-title').textContent = title;
+  document.getElementById('custom-confirm-message').textContent = message;
+  
+  customConfirmCallback = callback;
+  
+  const confirmBtn = document.getElementById('custom-confirm-btn');
+  confirmBtn.onclick = () => {
+    if (customConfirmCallback) customConfirmCallback();
+    closeCustomConfirm();
+  };
+  
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeCustomConfirm() {
+  const modal = document.getElementById('custom-confirm-modal');
+  if (modal) modal.style.display = 'none';
+  customConfirmCallback = null;
 }

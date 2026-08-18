@@ -144,10 +144,10 @@
           <span class="nav-icon">🖨️</span>
           <span class="nav-text">대장 출력</span>
         </button>
-        <!-- 관리자 탭: 비밀번호 확인 후 진입 -->
-        <button class="nav-btn" id="tab-admin-btn" role="tab" aria-selected="false" onclick="checkAdminPassword()">
+        <!-- 관리자 탭: 관리자 권한 부여 시에만 표시 -->
+        <button class="nav-btn" id="tab-admin-btn" role="tab" aria-selected="false" onclick="switchTab('admin')" style="display:none;">
           <span class="nav-icon">⚙️</span>
-          <span class="nav-text">관리자</span>
+          <span class="nav-text">관리자 설정</span>
         </button>
       </nav>
     </aside>
@@ -872,33 +872,7 @@
 
 
 
-  <!-- ===== 관리자 비밀번호 확인 모달 ===== -->
-  <div class="modal-overlay" id="admin-password-modal" style="display:none;" onclick="closeAdminPasswordModal()">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">
-      <div class="modal-header">
-        <h3 class="modal-title">🔐 관리자 로그인</h3>
-        <button class="modal-close" onclick="closeAdminPasswordModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
-          관리자 페이지에 접근하려면 비밀번호를 입력하세요.
-        </p>
-        <div class="form-group">
-          <label class="form-label">비밀번호</label>
-          <div class="pw-input-wrapper">
-            <input type="password" id="admin-password-input" class="form-input"
-              placeholder="비밀번호 입력"
-              onkeydown="if(event.key==='Enter') submitAdminPassword()" />
-            <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility('admin-password-input', this)">👁️</button>
-          </div>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeAdminPasswordModal()">취소</button>
-        <button class="btn btn-primary" onclick="submitAdminPassword()">🔓 확인</button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- 직원 정보 수정 모달 -->
   <div class="modal-overlay" id="edit-employee-modal" style="display:none;">
@@ -938,6 +912,20 @@
         </form>
       </div>
     </div>
+    </div>
+  </div>
+
+  <!-- 커스텀 확인(Confirm) 모달 -->
+  <div class="modal-overlay" id="custom-confirm-modal" style="display:none;" onclick="closeCustomConfirm()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:400px; text-align:center;">
+      <div class="modal-body" style="padding: 2rem 1.5rem 1rem 1.5rem;">
+        <h3 id="custom-confirm-title" style="font-size: 1.25rem; font-weight: bold; margin-bottom: 1rem;">확인</h3>
+        <p id="custom-confirm-message" style="color: var(--text-secondary); margin-bottom: 2rem; white-space: pre-wrap; word-break: keep-all;"></p>
+        <div style="display:flex; gap:0.5rem; justify-content:center;">
+          <button class="btn btn-ghost" style="flex:1;" onclick="closeCustomConfirm()">취소</button>
+          <button class="btn btn-primary" id="custom-confirm-btn" style="flex:1;">확인</button>
+        </div>
+      </div>
     </div>
   </div>
 
