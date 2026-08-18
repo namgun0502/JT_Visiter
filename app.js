@@ -2247,11 +2247,11 @@ async function loadAuditLog() {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="font-size:0.85rem; color:var(--text-secondary);">${date}</td>
-          <td>${actionBadge}</td>
-          <td style="font-weight:500;">${targetName}</td>
-          <td>${log.actor_name}</td>
-          <td style="font-size:0.9rem; color:var(--text-secondary);">${log.remarks || ''}</td>
+          <td style="font-size:0.82rem; color:var(--text-secondary); white-space:nowrap;">${date}</td>
+          <td style="white-space:nowrap;">${actionBadge}</td>
+          <td style="font-weight:500; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis;">${targetName}</td>
+          <td style="white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis;">${log.actor_name}</td>
+          <td style="font-size:0.85rem; color:var(--text-secondary);">${log.remarks || ''}</td>
         `;
         list.appendChild(tr);
       });

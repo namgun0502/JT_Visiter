@@ -1725,3 +1725,57 @@ body {
   vertical-align: middle !important;
   text-align: center !important;
 }
+
+/* =========================================================
+   이력 관리 테이블 반응형 스타일
+   ========================================================= */
+
+/* 테이블을 가로 스크롤 가능하게 감싸는 컨테이너 */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;          /* 가로 스크롤 허용 */
+  -webkit-overflow-scrolling: touch; /* iOS 부드러운 스크롤 */
+}
+
+/* 이력 관리 테이블 기본 스타일 */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  /* 테이블이 컨테이너보다 넓어질 경우 최소 너비 보장 */
+  min-width: 520px;
+}
+
+.data-table thead tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  /* 헤더 셀도 한 줄 유지 */
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.7rem 0.75rem;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  /* 셀 내용이 절대로 줄 바꿈 되지 않도록 */
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+/* 상세 내용 컬럼만 예외적으로 줄 바꿈 허용 */
+.data-table td:last-child {
+  white-space: normal;
+  word-break: keep-all;
+  min-width: 100px;
+}
+
+.data-table tbody tr:hover {
+  background: var(--glass-hover);
+}
