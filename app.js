@@ -2223,13 +2223,15 @@ async function loadAuditLog() {
         const date = new Date(log.created_at).toLocaleString('ko-KR');
         
         let actionBadge = '';
-        if (log.action === 'CREATED') actionBadge = '<span class="tag" style="background:#4B5563; color:#fff;">등록</span>';
-        else if (log.action === 'APPROVED') actionBadge = '<span class="tag" style="background:#047857; color:#fff;">승인</span>';
-        else if (log.action === 'REJECTED') actionBadge = '<span class="tag" style="background:#B91C1C; color:#fff;">반려</span>';
-        else if (log.action === 'DELETED') actionBadge = '<span class="tag" style="background:#F59E0B; color:#fff;">삭제됨</span>';
-        else if (log.action === 'RESTORED') actionBadge = '<span class="tag" style="background:#3B82F6; color:#fff;">복구됨</span>';
-        else if (log.action === 'UPDATED') actionBadge = '<span class="tag" style="background:#6366F1; color:#fff;">수정됨</span>';
-        else actionBadge = `<span class="tag">${log.action}</span>`;
+        const badgeBaseStyle = 'color:#fff; border-radius:9999px; padding:0.2rem 0.6rem; font-size:0.75rem; font-weight:bold; display:inline-block; border:1px solid rgba(0,0,0,0.1);';
+        
+        if (log.action === 'CREATED') actionBadge = `<span class="tag" style="background:#4B5563; ${badgeBaseStyle}">등록</span>`;
+        else if (log.action === 'APPROVED') actionBadge = `<span class="tag" style="background:#047857; ${badgeBaseStyle}">승인</span>`;
+        else if (log.action === 'REJECTED') actionBadge = `<span class="tag" style="background:#B91C1C; ${badgeBaseStyle}">반려</span>`;
+        else if (log.action === 'DELETED') actionBadge = `<span class="tag" style="background:#E14B4B; ${badgeBaseStyle}">삭제됨</span>`; // 붉은색
+        else if (log.action === 'RESTORED') actionBadge = `<span class="tag" style="background:#14A870; ${badgeBaseStyle}">복구됨</span>`; // 초록색
+        else if (log.action === 'UPDATED') actionBadge = `<span class="tag" style="background:#6366F1; ${badgeBaseStyle}">수정됨</span>`;
+        else actionBadge = `<span class="tag" style="background:#9DA5AF; ${badgeBaseStyle}">${log.action}</span>`;
 
         let targetName = '알 수 없음';
         const vInfo = visitorsMap[log.visitor_id];
