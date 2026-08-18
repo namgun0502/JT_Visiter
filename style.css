@@ -882,8 +882,9 @@ body {
    ========================================================= */
 @media (max-width: 640px) {
   .app-wrapper {
-    padding: 1rem 0.75rem 2rem;
-    gap: 1rem;
+    /* 모바일에서 좌우 여백 완전 제거 */
+    padding: 0 0 2rem 0;
+    gap: 0.5rem;
   }
 
   /* 모바일에서 헤더 시간 숨김 */
@@ -911,9 +912,25 @@ body {
     grid-template-columns: 1fr;
   }
 
+  /* 카드 좌우 여백 완전 제거, 테두리 둥글기 줄이기 */
   .card {
-    padding: 1rem;
-    border-radius: var(--radius-md);
+    padding: 0.9rem 0.75rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* 헤더 좌우 패딩 줄이기 */
+  .app-header {
+    padding: 0.85rem 0.75rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* main-content-wrapper gap 줄이기 */
+  .main-content-wrapper {
+    gap: 0.5rem;
   }
 
   /* 직원 카드를 1열로 */
@@ -1464,7 +1481,9 @@ body {
 @media (max-width: 768px) {
   .app-wrapper {
     flex-direction: column;
-    padding: 0.75rem 0.5rem 80px; /* 좌우 여백 최소화, 하단 탭 공간 확보 */
+    /* 상하 여백만, 좌우는 0으로 */
+    padding: 0 0 80px 0;
+    gap: 0;
   }
   .app-sidebar {
     position: fixed;
