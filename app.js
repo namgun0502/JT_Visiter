@@ -611,8 +611,8 @@ function updateEmployeeDropdowns(employees) {
 
   // 역할에 따라 직원 목록 분류
   // role 컬럼이 없는 기존 데이터는 안내자로 취급
-  const guides    = employees.filter(e => !e.role || e.role === '안내자' || e.role === '안내자+승인자');
-  const approvers = employees.filter(e => e.role === '승인자' || e.role === '안내자+승인자');
+  const guides    = employees.filter(e => !e.role || ['안내자', '안내자+승인자', 'admin', 'superadmin'].includes(e.role));
+  const approvers = employees.filter(e => ['승인자', '안내자+승인자', 'admin', 'superadmin'].includes(e.role));
 
   // 특정 select 요소를 특정 목록으로 채우는 내부 함수
   function fillSelect(select, list) {
@@ -726,7 +726,7 @@ async function loadPendingApprovals() {
       data.forEach(record => {
         // 결재 권한 여부 확인 (승인자 또는 안내자+승인자)
         const canApprove = currentUser &&
-          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin');
 
         const card = document.createElement('div');
         card.className = 'record-card';
@@ -865,7 +865,7 @@ async function loadArchiveApprovals(filter = 'all') {
       data.forEach(record => {
         // 결재 권한 여부 확인 (상태 수정 버튼 표시에 사용)
         const canApprove = currentUser &&
-          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin');
 
         const isApproved = record.approval_status === '승인';
         const statusTag = isApproved 
@@ -1124,7 +1124,7 @@ async function showApprovalDetail(id, mode = 'view') {
     if (actionsEl) {
       if (mode === 'approve' || mode === 'edit') {
         const hasApproveRole = currentUser &&
-          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+          (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin');
 
         if (hasApproveRole) {
           actionsEl.style.display = 'flex';
@@ -1193,7 +1193,7 @@ async function submitApproval(decision) {
 
   // 승인/반려 시 권한 재확인 (이중 방어)
   const hasApproveRole = currentUser &&
-    (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+    (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin');
   if (!hasApproveRole) {
     showToast('결재 권한이 없습니다.', 'error');
     return;
@@ -1240,7 +1240,7 @@ async function submitFitnessChange(decision) {
   if (!currentApprovalRecordId) return;
 
   const hasApproveRole = currentUser &&
-    (currentUser.role === '승인자' || currentUser.role === '안내자+승인자');
+    (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin');
   if (!hasApproveRole) {
     showToast('권한이 없습니다.', 'error');
     return;
@@ -1996,7 +1996,7 @@ async function loadTrash(filter = 'all') {
         }
         
         let actionBtns = '';
-        if (currentUser && (currentUser.role === '승인자' || currentUser.role === '안내자+승인자')) {
+        if (currentUser && (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
           actionBtns = `
             <button class="btn btn-secondary btn-sm" onclick="restoreRecord('${record.id}')">♻️ 복구</button>
             <button class="btn btn-danger btn-sm" onclick="hardDeleteRecord('${record.id}')">영구 삭제</button>
@@ -2033,7 +2033,7 @@ async function loadTrash(filter = 'all') {
 
 // --- 휴지통 복구 함수 ---
 async function restoreRecord(id) {
-  if (!currentUser || (currentUser.role !== '승인자' && currentUser.role !== '안내자+승인자')) {
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin' && currentUser.role !== '승인자' && currentUser.role !== '안내자+승인자')) {
     showToast('승인자 권한이 필요합니다.', 'error');
     return;
   }
