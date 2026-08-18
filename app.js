@@ -2006,17 +2006,20 @@ async function loadTrash(filter = 'all') {
         }
 
         const card = document.createElement('div');
-        card.className = 'record-card';
+        // record-card의 ::before(수직 색상 바)를 모바일에서 제거하기 위해 class 분리
+        card.className = 'record-card trash-record-card';
         card.innerHTML = `
-          <div class="record-header">
-            <h3 class="record-name">${record.visitor_name || '이름 없음'} <span class="tag" style="background:#000000; color:#fff; border:1px solid #000000; border-radius:9999px; padding:0.2rem 0.6rem; font-size:0.8rem;">삭제됨</span>${originBadge}</h3>
-            <span class="record-date">${deletedAt} 삭제</span>
+          <div class="trash-card-header" style="display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; margin-bottom:0.5rem;">
+            <h3 class="record-name" style="font-size:1rem; font-weight:700; margin:0;">${record.visitor_name || '이름 없음'}</h3>
+            <span class="tag" style="background:#ef4444; color:#fff; border:1px solid #ef4444; border-radius:9999px; padding:0.15rem 0.55rem; font-size:0.75rem; white-space:nowrap;">삭제됨</span>
+            ${originBadge}
           </div>
-          <div class="record-info">
-            <p><strong>방문일:</strong> ${record.visit_date} ${record.visit_time || ''}</p>
-            <p><strong>삭제자:</strong> ${record.deleted_by || '알 수 없음'}</p>
+          <div class="trash-card-body" style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.88rem; color:var(--text-secondary);">
+            <div><strong style="color:var(--text-primary);">방문일:</strong> ${record.visit_date} ${record.visit_time || ''}</div>
+            <div><strong style="color:var(--text-primary);">삭제자:</strong> ${record.deleted_by || '알 수 없음'}</div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.15rem;">${deletedAt} 삭제</div>
           </div>
-          <div class="record-actions" style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
+          <div class="trash-card-footer" style="margin-top:0.75rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
             ${actionBtns}
           </div>
         `;

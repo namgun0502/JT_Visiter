@@ -921,9 +921,23 @@ body {
     grid-template-columns: 1fr;
   }
 
-  /* 방문 기록 카드 간소화 */
+  /* 방문 기록 카드 모바일 친화적 레이아웃: 세로 쌓기 */
   .record-card {
     padding: 0.9rem 1rem;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  /* record-card::before 일뛰 좌측 수직 바를 가로 상단 바로 대체 */
+  .record-card::before {
+    width: 100%;
+    height: 3px;
+    min-height: unset;
+  }
+
+  /* record-actions 버튼을 왼쪽 정렬 */
+  .record-actions {
+    justify-content: flex-start !important;
   }
 }
 
@@ -950,6 +964,15 @@ body {
 /* =========================================================
    20. 4단계 위자드 전용 스타일
    ========================================================= */
+
+/* 휴지통 카드 전용: 수직 색상 바 제거 + 세로 레이아웃 */
+.trash-record-card {
+  flex-direction: column;
+  gap: 0;
+}
+.trash-record-card::before {
+  display: none;
+}
 
 /* 위자드 카드는 내부 gap을 좀 더 줍니다 */
 .wizard-card {
@@ -1441,7 +1464,7 @@ body {
 @media (max-width: 768px) {
   .app-wrapper {
     flex-direction: column;
-    padding-bottom: 80px; /* 하단 탭 공간 확보 */
+    padding: 0.75rem 0.5rem 80px; /* 좌우 여백 최소화, 하단 탭 공간 확보 */
   }
   .app-sidebar {
     position: fixed;
