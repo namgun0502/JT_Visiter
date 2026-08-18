@@ -161,16 +161,23 @@ body {
 .app-wrapper {
   position: relative;
   z-index: 1;
-  width: 100%;              /* 화면 전체 너비 사용 */
-  max-width: 100%;          /* 최대 너비 제한 해제 */
+  width: 100%;
+  max-width: 100%;
   margin: 0;
-  padding: 1.5rem 2rem 3rem; /* 좌우 여백을 2rem으로 */
+  padding: 0;              /* 기본은 여백 없음 */
   box-sizing: border-box;
   display: flex;
-  flex-direction: row;    /* 가로 배치 */
+  flex-direction: row;
   align-items: flex-start;
   gap: 1.5rem;
   min-height: 100vh;
+}
+
+/* PC 화면(769px 이상)에서만 좌우 여백 적용 */
+@media (min-width: 769px) {
+  .app-wrapper {
+    padding: 1.5rem 2rem 3rem;
+  }
 }
 
 /* =========================================================
