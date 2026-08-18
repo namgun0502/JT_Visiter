@@ -387,6 +387,7 @@ body {
 /* 입력 필드 (input, select) */
 .form-input {
   width: 100%;
+  box-sizing: border-box;
   padding: 0.7rem 0.9rem;
   background: var(--color-bg-container);
   border: 1px solid var(--border);
@@ -890,6 +891,11 @@ body {
     display: none;
   }
 
+  /* 모바일 환경에서는 대장 출력 탭 숨김 */
+  #tab-ledger-btn {
+    display: none !important;
+  }
+
   .header-title {
     font-size: 1.1rem;
   }
@@ -1223,6 +1229,7 @@ body {
 
 .signature-canvas {
   width: 100%;
+  box-sizing: border-box;
   height: 180px;
   background: rgba(255,255,255,0.95);
   border-radius: var(--radius-md);
