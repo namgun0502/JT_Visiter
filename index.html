@@ -902,7 +902,7 @@
 
   <!-- 직원 정보 수정 모달 -->
   <div class="modal-overlay" id="edit-employee-modal" style="display:none;">
-    <div class="modal-content" style="max-width: 500px;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 500px;">
       <div class="modal-header">
         <h3 class="modal-title">✏️ 직원 정보 수정</h3>
         <button class="modal-close" onclick="closeEditModal()">✕</button>
@@ -943,7 +943,7 @@
 
   <!-- 직원 로그인 / 비밀번호 설정(가입) 모달 -->
   <div class="modal-overlay" id="auth-modal" style="display:none;">
-    <div class="modal-content" style="max-width: 400px;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 400px;">
       <div class="modal-header">
         <h3 class="modal-title" id="auth-modal-title">🔐 직원 로그인</h3>
         <button class="modal-close" onclick="closeAuthModal()">✕</button>

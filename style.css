@@ -1489,8 +1489,8 @@ body {
 }
 
 .modal {
-  background: var(--surface);
-  border: 1px solid var(--glass-border);
+  background: var(--color-bg-container); /* 불투명한 카드 배경색 */
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 520px;
