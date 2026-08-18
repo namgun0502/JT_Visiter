@@ -1075,6 +1075,7 @@ body {
 }
 
 .purpose-btn {
+  flex: 1;
   padding: 0.6rem 1.2rem;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
@@ -1085,6 +1086,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition);
+  text-align: center;
 }
 
 .purpose-btn:hover {
@@ -1158,8 +1160,14 @@ body {
   flex-shrink: 0;
 }
 
+/* Step 4와 같은 독립적인 버튼 그룹은 가로를 꽉 채우도록 */
+.form-group > .yn-buttons {
+  width: 100%;
+}
+
 /* 예/아니오 버튼 공통 */
 .yn-btn {
+  flex: 1;
   padding: 0.4rem 0.9rem;
   border-radius: var(--radius-sm);
   font-family: var(--font);
@@ -1168,6 +1176,7 @@ body {
   cursor: pointer;
   transition: all var(--transition);
   border: 2px solid transparent;
+  text-align: center;
 }
 
 /* '예' 버튼 기본 */
