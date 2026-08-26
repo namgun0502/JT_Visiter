@@ -18,7 +18,7 @@
   --seed-color-accent: #305CDE;
   --seed-color-success: #14A870;
   --seed-color-warning: #F0B01C;
-  --seed-color-error: #E14B4B;
+  --seed-color-error: #FF2D2D;
   --seed-color-info: #305CDE;
   
   --seed-font-base: "Pretendard Variable", Pretendard, "Figtree", "Noto Sans SC", "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
@@ -63,7 +63,7 @@
 
   /* 상태별 연한 배경 (light tint) */
   --success-light: rgba(20,168,112,0.15);
-  --danger-light: rgba(225,75,75,0.15);
+  --danger-light: rgba(255,45,45,0.18);
   --primary-light: rgba(59,130,246,0.1);
   --warning-light: rgba(240,176,28,0.15);
 

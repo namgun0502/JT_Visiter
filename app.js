@@ -2069,6 +2069,18 @@ async function hardDeleteRecord(id) {
   
   showCustomConfirm('영구 삭제', '정말 이 문서를 영구 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.', async () => {
     try {
+      // ① 이력 관리 로그(visitor_logs)에서 visitor_id를 null로 먼저 초기화
+      //    → 이렇게 해야 visitors 삭제 시 이력이 함께 지워지지 않음
+      const { error: logErr } = await db
+        .from('visitor_logs')
+        .update({ visitor_id: null })
+        .eq('visitor_id', id);
+      if (logErr) {
+        console.warn('이력 visitor_id 초기화 경고:', logErr);
+        // 경고만 출력하고 삭제는 계속 진행
+      }
+
+      // ② visitors 테이블에서 실제 영구 삭제
       const { error } = await db.from('visitors').delete().eq('id', id);
       if (error) throw error;
       
