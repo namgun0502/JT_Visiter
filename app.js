@@ -2069,18 +2069,19 @@ async function hardDeleteRecord(id) {
   
   showCustomConfirm('영구 삭제', '정말 이 문서를 영구 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.', async () => {
     try {
-      // ① 이력 관리 로그(visitor_logs)에서 visitor_id를 null로 먼저 초기화
-      //    → 이렇게 해야 visitors 삭제 시 이력이 함께 지워지지 않음
+      // ① 영구 삭제 이력을 가장 먼저 기록 (삭제 전이라 visitor_id가 아직 유효)
+      await logAction(id, 'HARD_DELETED', '영구 삭제됨 (복구 불가)');
+
+      // ② 기존 이력들의 visitor_id를 null로 초기화 → CASCADE 삭제 방지
       const { error: logErr } = await db
         .from('visitor_logs')
         .update({ visitor_id: null })
         .eq('visitor_id', id);
       if (logErr) {
         console.warn('이력 visitor_id 초기화 경고:', logErr);
-        // 경고만 출력하고 삭제는 계속 진행
       }
 
-      // ② visitors 테이블에서 실제 영구 삭제
+      // ③ visitors 테이블에서 실제 영구 삭제
       const { error } = await db.from('visitors').delete().eq('id', id);
       if (error) throw error;
       
@@ -2243,8 +2244,9 @@ async function loadAuditLog() {
         if (log.action === 'CREATED') actionBadge = `<span class="tag" style="background:#4B5563; ${badgeBaseStyle}">등록</span>`;
         else if (log.action === 'APPROVED') actionBadge = `<span class="tag" style="background:#047857; ${badgeBaseStyle}">승인</span>`;
         else if (log.action === 'REJECTED') actionBadge = `<span class="tag" style="background:#B91C1C; ${badgeBaseStyle}">반려</span>`;
-        else if (log.action === 'DELETED') actionBadge = `<span class="tag" style="background:#E14B4B; ${badgeBaseStyle}">삭제됨</span>`; // 붉은색
-        else if (log.action === 'RESTORED') actionBadge = `<span class="tag" style="background:#14A870; ${badgeBaseStyle}">복구됨</span>`; // 초록색
+        else if (log.action === 'DELETED') actionBadge = `<span class="tag" style="background:#E14B4B; ${badgeBaseStyle}">삭제됨</span>`;
+        else if (log.action === 'HARD_DELETED') actionBadge = `<span class="tag" style="background:#7F1D1D; border:1.5px solid #FF2D2D !important; ${badgeBaseStyle}">🗑️ 영구삭제</span>`;
+        else if (log.action === 'RESTORED') actionBadge = `<span class="tag" style="background:#14A870; ${badgeBaseStyle}">복구됨</span>`;
         else if (log.action === 'UPDATED') actionBadge = `<span class="tag" style="background:#6366F1; ${badgeBaseStyle}">수정됨</span>`;
         else actionBadge = `<span class="tag" style="background:#9DA5AF; ${badgeBaseStyle}">${log.action}</span>`;
 
