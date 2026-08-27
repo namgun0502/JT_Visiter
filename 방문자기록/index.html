@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <!-- 모바일에서도 화면이 잘 보이도록 뷰포트 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO: 검색엔진이 이 페이지를 인식하는 제목 -->
+  <title>JT_Visiter</title>
+  <meta name="description" content="JT 회사 외부 방문자 출입 등록, 위생 자가점검, 준수사항 동의, 안내자 확인을 포함한 방문자 관리 시스템" />
+
+  <!-- Google Fonts & Pretendard: 다국어(한글/영문/숫자/중문) 최적화 폰트 묶음 (v3.0) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- 서명 패드 라이브러리 (마우스/터치로 서명 가능) -->
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+
+  <!-- 우리가 만든 스타일시트 -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- 대장 인쇄 전용 CSS -->
+  <style>
+    @media print {
+      /* 세로(Portrait) 방향 강제 */
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+      
+      /* 숨길 요소들 */
+      .app-sidebar, .app-header, .no-print, .toast-container, .modal-backdrop {
+        display: none !important;
+      }
+
+      /* 메인 콘텐츠 영역 여백 제거 및 전체 화면 사용 */
+      .app-wrapper {
+        display: block;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+      .main-content-wrapper {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+      }
+
+      /* 출력될 영역 설정 */
+      #printable-ledger {
+        display: block !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+        background: white;
+        overflow: visible !important; /* 인쇄 시 잘림 방지 */
+      }
+      
+      /* 세로 A4에 맞게 테이블 축소 조정 */
+      .ledger-header h1 { font-size: 20px !important; }
+      .approval-block { font-size: 11px !important; }
+      .approval-block td { padding: 2px !important; }
+      
+      .ledger-table {
+        min-width: auto !important;
+        width: 100% !important;
+        font-size: 11px !important; /* 글씨 작게 */
+        word-break: keep-all; /* 단어 단위로 줄바꿈 */
+      }
+      
+      .ledger-table th, .ledger-table td {
+        padding: 4px 2px !important; /* 여백 대폭 축소 */
+        overflow-wrap: break-word;
+      }
+
+      /* 모든 탭 패널 중 출력할 패널만 보이게 함 */
+      .tab-panel {
+        display: none !important;
+      }
+      #tab-ledger {
+        display: block !important;
+      }
+
+      /* 테이블 테두리를 진하게 */
+      .ledger-table th, .ledger-table td,
+      .approval-block td {
+        border: 1px solid #000 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== 전체 화면 그라디언트 배경 ===================== -->
+  <div class="bg-gradient"></div>
+
+  <!-- ===================== 앱 전체 감싸는 컨테이너 ===================== -->
+  <div class="app-wrapper">
+
+    <!-- ===== 좌측 사이드바 ===== -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+        <span class="jt-logo">
+          <img src="./brand/logo/logo-h.svg"       alt="Janytree" class="on-light">
+          <img src="./brand/logo/logo-h-light.svg" alt="Janytree" class="on-dark" aria-hidden="true">
+        </span>
+        <h1 class="sidebar-title" style="font-size: 1rem; color: var(--text-secondary); margin-left: 2px; margin-top: 4px;">JT_Visiter</h1>
+      </div>
+      <nav class="sidebar-nav" role="tablist">
+        <button class="nav-btn active" id="tab-register-btn" role="tab" aria-selected="true" onclick="switchTab('register')">
+          <span class="nav-icon">📝</span>
+          <span class="nav-text">방문자 등록</span>
+        </button>
+        <button class="nav-btn" id="tab-approval-btn" role="tab" aria-selected="false" onclick="switchTab('approval')">
+          <span class="nav-icon">✅</span>
+          <span class="nav-text">결재 승인</span>
+          <span class="nav-badge" id="approval-badge">0</span>
+        </button>
+        <!-- 적합/부적합 보관함 탭 -->
+        <button class="nav-btn" id="tab-archive-btn" role="tab" aria-selected="false" onclick="switchTab('archive')">
+          <span class="nav-icon">📁</span>
+          <span class="nav-text">보관함</span>
+        </button>
+        <!-- 휴지통 탭 -->
+        <button class="nav-btn" id="tab-trash-btn" role="tab" aria-selected="false" onclick="switchTab('trash')">
+          <span class="nav-icon">🗑️</span>
+          <span class="nav-text">휴지통</span>
+        </button>
+        <!-- 이력 관리 탭 -->
+        <button class="nav-btn" id="tab-audit-btn" role="tab" aria-selected="false" onclick="switchTab('audit')">
+          <span class="nav-icon">📜</span>
+          <span class="nav-text">이력 관리</span>
+        </button>
+        <!-- 관리대장 탭 -->
+        <button class="nav-btn" id="tab-ledger-btn" role="tab" aria-selected="false" onclick="switchTab('ledger')">
+          <span class="nav-icon">🖨️</span>
+          <span class="nav-text">대장 출력</span>
+        </button>
+        <!-- 관리자 탭: 관리자 권한 부여 시에만 표시 -->
+        <button class="nav-btn" id="tab-admin-btn" role="tab" aria-selected="false" onclick="switchTab('admin')" style="display:none;">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-text">관리자 설정</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- ===== 우측 메인 콘텐츠 영역 ===== -->
+    <div class="main-content-wrapper">
+      <header class="app-header">
+        <h2 class="page-title" id="page-title">방문자 등록</h2>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <div class="header-time" id="current-time"></div>
+          <div id="user-auth-section" style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem;">
+            <!-- JS로 상태에 따라 채워짐 -->
+          </div>
+        </div>
+      </header>
+
+      <main class="app-main">
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 방문자 출입기록 (4단계 위자드) -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel active" id="tab-register" role="tabpanel">
+        <div class="card wizard-card">
+
+          <!-- ── 프로그레스 바 (단계 표시기) ── -->
+          <div class="wizard-progress" id="wizard-progress">
+            <div class="progress-step active" id="prog-1">
+              <div class="progress-circle">1</div>
+              <span class="progress-label">기본정보</span>
+            </div>
+            <div class="progress-line" id="line-1-2"></div>
+            <div class="progress-step" id="prog-2">
+              <div class="progress-circle">2</div>
+              <span class="progress-label">건강확인</span>
+            </div>
+            <div class="progress-line" id="line-2-3"></div>
+            <div class="progress-step" id="prog-3">
+              <div class="progress-circle">3</div>
+              <span class="progress-label">준수동의</span>
+            </div>
+            <div class="progress-line" id="line-3-4"></div>
+            <div class="progress-step" id="prog-4">
+              <div class="progress-circle">4</div>
+              <span class="progress-label">안내자확인</span>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════════════════ -->
+          <!--  STEP 1: 방문자 기본 정보                        -->
+          <!-- ════════════════════════════════════════════════ -->
+          <div class="wizard-step active" id="step-1">
+            <div class="step-header">
+              <h2 class="step-title">Step 1. 방문자 기본 정보</h2>
+              <p class="step-desc">방문자의 기본 정보와 방문 목적을 입력해 주세요.</p>
+            </div>
+
+            <!-- 방문 일자 + 방문 시간 -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="s1-date">
+                  방문 일자 <span class="required">*</span>
+                </label>
+                <input type="date" id="s1-date" class="form-input" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="s1-time">
+                  방문 시간 <span class="required">*</span>
+                </label>
+                <input type="time" id="s1-time" class="form-input" required />
+              </div>
+            </div>
+
+            <!-- 방문자 이름 + 방문자 소속 -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="s1-name">
+                  방문자 이름 <span class="required">*</span>
+                </label>
+                <input type="text" id="s1-name" class="form-input" placeholder="홍길동" required maxlength="50" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="s1-company">방문자 소속</label>
+                <input type="text" id="s1-company" class="form-input" placeholder="ABC 주식회사" maxlength="100" />
+              </div>
+            </div>
+
+            <!-- 방문 목적 버튼 선택 -->
+            <div class="form-group">
+              <label class="form-label">
+                방문 목적 <span class="required">*</span>
+              </label>
+              <div class="purpose-buttons" id="purpose-buttons">
+                <button type="button" class="purpose-btn" data-value="시설견학" onclick="selectPurpose(this)">🏭 시설견학</button>
+                <button type="button" class="purpose-btn" data-value="설비보수" onclick="selectPurpose(this)">🔧 설비보수</button>
+                <button type="button" class="purpose-btn" data-value="업무협의" onclick="selectPurpose(this)">💼 업무협의</button>
+                <button type="button" class="purpose-btn" data-value="기타" onclick="selectPurpose(this)">📝 기타</button>
+              </div>
+              <!-- '기타' 선택 시에만 보이는 사유 입력란 -->
+              <div class="form-group" id="purpose-other-group" style="display:none; margin-top: 12px;">
+                <label class="form-label" for="s1-purpose-other">기타 사유 <span class="required">*</span></label>
+                <input type="text" id="s1-purpose-other" class="form-input" placeholder="방문 사유를 직접 입력해 주세요" maxlength="100" />
+              </div>
+            </div>
+
+            <!-- Step 1 버튼 -->
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-ghost" onclick="cancelWizard()">✕ 취소</button>
+              <button type="button" class="btn btn-primary" onclick="goStep(2)" id="step1-next-btn">다음 →</button>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════════════════ -->
+          <!--  STEP 2: 방문자 위생 및 건강상태 자가점검         -->
+          <!-- ════════════════════════════════════════════════ -->
+          <div class="wizard-step" id="step-2">
+            <div class="step-header">
+              <h2 class="step-title">Step 2. 방문자 위생 및 건강상태 자가점검</h2>
+              <p class="step-desc">아래 항목에 솔직하게 답변해 주세요. (해당 항목에 예/아니오 선택)</p>
+            </div>
+
+            <!-- 건강 체크 문항들 -->
+            <div class="health-questions">
+              <!-- Q1 -->
+              <div class="hq-item" id="hq-1">
+                <div class="hq-text">
+                  <span class="hq-num">1</span>
+                  <span>최근 1주일 내 감염병(감기, 눈병 등)에 걸린 적이 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q1" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q1" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- Q2 -->
+              <div class="hq-item" id="hq-2">
+                <div class="hq-text">
+                  <span class="hq-num">2</span>
+                  <span>현재 소화기 증상(설사, 복통 등)이 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q2" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q2" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- Q3 -->
+              <div class="hq-item" id="hq-3">
+                <div class="hq-text">
+                  <span class="hq-num">3</span>
+                  <span>피부질환(고름, 심한 습진 등)이 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q3" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q3" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- Q4 -->
+              <div class="hq-item" id="hq-4">
+                <div class="hq-text">
+                  <span class="hq-num">4</span>
+                  <span>인화물, 음식물, 위생용품을 소지하고 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q4" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q4" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- Q5 -->
+              <div class="hq-item" id="hq-5">
+                <div class="hq-text">
+                  <span class="hq-num">5</span>
+                  <span>탈락 위험이 있는 장신구(반지 등)를 착용하고 있나요?</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="health_q5" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="health_q5" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2 버튼 -->
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-ghost" onclick="goStep(1)">← 이전</button>
+              <button type="button" class="btn btn-ghost" onclick="cancelWizard()">✕ 취소</button>
+              <button type="button" class="btn btn-primary" onclick="goStep(3)">다음 →</button>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════════════════ -->
+          <!--  STEP 3: 준수사항 및 보안 동의                   -->
+          <!-- ════════════════════════════════════════════════ -->
+          <div class="wizard-step" id="step-3">
+            <div class="step-header">
+              <h2 class="step-title">Step 3. 준수사항 및 보안 동의</h2>
+              <p class="step-desc">아래 준수사항을 숙지하고 동의 여부를 선택해 주세요.</p>
+            </div>
+
+            <!-- 준수사항 문항들 -->
+            <div class="health-questions">
+              <!-- C1 -->
+              <div class="hq-item" id="cq-1">
+                <div class="hq-text">
+                  <span class="hq-num">1</span>
+                  <span>본 시설은 엄격한 위생 관리가 필요한 화장품 생산 구역으로 입실 전 반드시 지정된 위생복과 위생화, 위생모를 착용하고 철저한 손 소독을 실시해야 합니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q1" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q1" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- C2 -->
+              <div class="hq-item" id="cq-2">
+                <div class="hq-text">
+                  <span class="hq-num">2</span>
+                  <span>생산 구역 내에서는 음식물 섭취 및 흡연을 엄격히 금지하며, 이물 혼입 방지를 위해 반지, 시계 등 모든 개인 장신구의 착용이 제한됩니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q2" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q2" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- C3 -->
+              <div class="hq-item" id="cq-3">
+                <div class="hq-text">
+                  <span class="hq-num">3</span>
+                  <span>방문 시 안내자의 지시에 따라 지정된 동선으로만 이동해야 하며, 허가되지 않은 생산 설비나 원료를 임의로 조작하거나 접촉하지 않습니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q3" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q3" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- C4 -->
+              <div class="hq-item" id="cq-4">
+                <div class="hq-text">
+                  <span class="hq-num">4</span>
+                  <span>시설 내부의 모든 촬영 및 녹취는 금지되며, 방문을 통해 취득한 기술 정보나 영업 비밀을 외부에 유출하지 않을 것을 약속합니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q4" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q4" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+              <!-- C5 -->
+              <div class="hq-item" id="cq-5">
+                <div class="hq-text">
+                  <span class="hq-num">5</span>
+                  <span>위 수칙을 위반하거나 관리자의 정당한 통제에 따르지 않을 경우 출입이 제한될 수 있음을 숙지하고 이에 동의합니다.</span>
+                </div>
+                <div class="yn-buttons">
+                  <button type="button" class="yn-btn yn-yes" data-q="compliance_q5" data-val="true" onclick="selectYN(this)">예</button>
+                  <button type="button" class="yn-btn yn-no" data-q="compliance_q5" data-val="false" onclick="selectYN(this)">아니오</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 동의 문구 -->
+            <div class="agreement-box">
+              <p>본인은 위 수칙을 숙지하였으며, 규정 준수에 동의합니다.</p>
+            </div>
+
+            <!-- 방문자 서명란 -->
+            <div class="form-group">
+              <label class="form-label">방문자 서명 <span class="required">*</span></label>
+              <div class="signature-container">
+                <canvas id="visitor-signature-canvas" class="signature-canvas"></canvas>
+                <div style="display: flex; gap: 0.5rem; align-self: flex-end;">
+                  <button type="button" class="signature-clear-btn" style="align-self: auto;" onclick="undoSignature('visitor')">되돌리기</button>
+                  <button type="button" class="signature-clear-btn" style="align-self: auto;" onclick="clearSignature('visitor')">지우기</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3 버튼 -->
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-ghost" onclick="goStep(2)">← 이전</button>
+              <button type="button" class="btn btn-ghost" onclick="cancelWizard()">✕ 취소</button>
+              <button type="button" class="btn btn-primary" onclick="goStep(4)">다음 →</button>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════════════════ -->
+          <!--  STEP 4: 안내자 확인                            -->
+          <!-- ════════════════════════════════════════════════ -->
+          <div class="wizard-step" id="step-4">
+            <div class="step-header">
+              <h2 class="step-title">Step 4. 안내자 확인</h2>
+              <p class="step-desc">안내자가 방문자 정보를 최종 확인하고 서명합니다.</p>
+            </div>
+
+
+
+            <!-- 적합 여부 선택 -->
+            <div class="form-group">
+              <label class="form-label">
+                적합 여부 <span class="required">*</span>
+              </label>
+              <div class="yn-buttons">
+                <button type="button" class="yn-btn yn-yes" data-q="fitness_status" data-val="적합" onclick="selectYN(this)">적합</button>
+                <button type="button" class="yn-btn yn-no" data-q="fitness_status" data-val="부적합" onclick="selectYN(this)">부적합</button>
+              </div>
+            </div>
+
+            <!-- 안내자 이름 드롭다운 -->
+            <div class="form-group">
+              <label class="form-label" for="s4-guide">
+                안내자 이름 <span class="required">*</span>
+              </label>
+              <select id="s4-guide" class="form-input form-select" required>
+                <option value="">안내자를 선택하세요</option>
+              </select>
+            </div>
+
+            <!-- 안내자 서명란 -->
+            <div class="form-group">
+              <label class="form-label">안내자 서명 <span class="required">*</span></label>
+              <div class="signature-container">
+                <canvas id="guide-signature-canvas" class="signature-canvas"></canvas>
+                <div style="display: flex; gap: 0.5rem; align-self: flex-end;">
+                  <button type="button" class="signature-clear-btn" style="align-self: auto;" onclick="undoSignature('guide')">되돌리기</button>
+                  <button type="button" class="signature-clear-btn" style="align-self: auto;" onclick="clearSignature('guide')">지우기</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 특이사항 -->
+            <div class="form-group">
+              <label class="form-label" for="s4-remarks">특이사항</label>
+              <textarea id="s4-remarks" class="form-input form-textarea" placeholder="특이사항이 있으면 입력해 주세요" maxlength="500"></textarea>
+            </div>
+
+            <!-- 결재 정보 -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">결재 상태</label>
+                <!-- 결재 상태 배지: 기본값 '대기' -->
+                <div class="approval-badge-wrap">
+                  <span class="approval-badge badge-pending" id="approval-status-badge">대기</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="s4-approver">결재 승인자</label>
+                <select id="s4-approver" class="form-input form-select">
+                  <option value="">승인자를 선택하세요</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Step 4 버튼 -->
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-ghost" onclick="goStep(3)">← 이전</button>
+              <button type="button" class="btn btn-ghost" onclick="cancelWizard()">✕ 취소</button>
+              <button type="button" class="btn btn-primary" id="save-btn" onclick="handleSave()">
+                <span>💾 저장</span>
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /wizard-card -->
+        </section>
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 결재 승인 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-approval" role="tabpanel" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">✅</span> 결재 승인 대기열</h2>
+              <p class="card-desc">안내자가 확인을 마친 방문자의 정보를 확인하고 최종 승인합니다.</p>
+            </div>
+            
+            <div id="approval-container">
+              <div class="loading-state" id="approval-loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>대기 목록을 불러오는 중...</p>
+              </div>
+              <div class="empty-state" id="approval-empty" style="display:none;">
+                <span class="empty-icon">🎉</span>
+                <p>승인 대기 중인 방문자가 없습니다.</p>
+              </div>
+              <div class="approval-list" id="approval-list">
+                <!-- JS에서 승인 대기 카드가 동적으로 추가됩니다 -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 적합/부적합 보관함 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-archive" role="tabpanel" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">📁</span> 적합/부적합 보관함</h2>
+              <p class="card-desc">이미 결재가 완료된 방문자 기록을 확인하고 관리합니다.</p>
+            </div>
+            
+            <div id="archive-container">
+              <!-- 보관함 전용 필터 -->
+              <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                <button class="btn btn-primary" id="filter-all" onclick="loadArchiveApprovals('all')" style="border-radius:20px; padding:0.4rem 1rem; background:rgba(255,255,255,0.05); color:var(--text-primary); border:1.5px solid rgba(255,255,255,0.2);">전체</button>
+                <button class="btn btn-ghost" id="filter-approved" onclick="loadArchiveApprovals('승인')" style="border-radius:20px; padding:0.4rem 1rem; background:var(--success-light); color:var(--success); border:1.5px solid var(--success);">적합 (승인)</button>
+                <button class="btn btn-ghost" id="filter-rejected" onclick="loadArchiveApprovals('반려')" style="border-radius:20px; padding:0.4rem 1rem; background:var(--danger-light); color:var(--danger); border:1.5px solid var(--danger);">부적합 (반려)</button>
+              </div>
+              
+              <div class="loading-state" id="archive-loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>보관함 목록을 불러오는 중...</p>
+              </div>
+              <div class="empty-state" id="archive-empty" style="display:none;">
+                <span class="empty-icon">📂</span>
+                <p>결재 완료된 방문자가 없습니다.</p>
+              </div>
+              <div class="approval-list" id="archive-list">
+                <!-- JS에서 보관함 카드가 동적으로 추가됩니다 -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 휴지통 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-trash" role="tabpanel" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">🗑️</span> 휴지통</h2>
+              <p class="card-desc">삭제된 문서를 보관합니다. 7일 후에는 영구 삭제됩니다.</p>
+              
+              <style>
+                .trash-filter-btn {
+                  border-radius: 9999px;
+                  padding: 0.4rem 1rem;
+                  font-size: 0.9rem;
+                  font-weight: 500;
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  opacity: 0.4;
+                }
+                .trash-filter-btn.active {
+                  opacity: 1;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                }
+                .trash-filter-btn[data-trash-filter="all"] {
+                  background: #000000;
+                  color: #ffffff;
+                  border: 1.5px solid #000000;
+                }
+                .trash-filter-btn[data-trash-filter="pending"] {
+                  background: #10B981; /* 초록색 */
+                  color: #ffffff;
+                  border: 1.5px solid #10B981;
+                }
+                .trash-filter-btn[data-trash-filter="archive"] {
+                  background: #F59E0B; /* 노랑(주황)색 */
+                  color: #ffffff;
+                  border: 1.5px solid #F59E0B;
+                }
+              </style>
+              <div class="filter-controls" style="margin-top: 1rem;">
+                <div class="filter-group" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                  <button class="trash-filter-btn active" data-trash-filter="all" onclick="loadTrash('all')">전체</button>
+                  <button class="trash-filter-btn" data-trash-filter="pending" onclick="loadTrash('pending')">결재승인 (대기)</button>
+                  <button class="trash-filter-btn" data-trash-filter="archive" onclick="loadTrash('archive')">보관함 (결재완료)</button>
+                </div>
+              </div>
+            </div>
+            <div id="trash-container">
+              <div class="loading-state" id="trash-loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>휴지통 목록을 불러오는 중...</p>
+              </div>
+              <div class="empty-state" id="trash-empty" style="display:none;">
+                <span class="empty-icon">🗑️</span>
+                <p>휴지통이 비어 있습니다.</p>
+              </div>
+              <div class="approval-list" id="trash-list">
+                <!-- JS에서 휴지통 카드가 동적으로 추가됩니다 -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 이력 관리 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-audit" role="tabpanel" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">📜</span> 전체 이력 관리</h2>
+              <p class="card-desc">문서의 생성, 승인, 반려, 수정, 삭제 및 복구 등 시스템 내 모든 타임라인 이력을 조회합니다.</p>
+              
+              <div class="filter-controls" style="margin-top: 1rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <input type="date" id="audit-start-date" class="form-input" style="width:140px; padding:0.4rem;" onchange="loadAuditLog()" title="시작일" />
+                <span style="color:var(--text-secondary);">~</span>
+                <input type="date" id="audit-end-date" class="form-input" style="width:140px; padding:0.4rem;" onchange="loadAuditLog()" title="종료일" />
+                
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('audit-start-date').value=''; document.getElementById('audit-end-date').value=''; loadAuditLog();">초기화</button>
+                <button class="btn btn-primary btn-sm" onclick="loadAuditLog()" style="margin-left:auto;">🔄 새로고침</button>
+              </div>
+            </div>
+            
+            <div id="audit-container">
+              <div class="loading-state" id="audit-loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>이력을 불러오는 중...</p>
+              </div>
+              <div class="empty-state" id="audit-empty" style="display:none;">
+                <span class="empty-icon">📝</span>
+                <p>기록된 이력이 없습니다.</p>
+              </div>
+              
+              <div class="table-responsive" style="margin-top: 1rem;">
+                <table class="data-table" id="audit-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 15%">시간</th>
+                      <th style="width: 12%">작업</th>
+                      <th style="width: 18%">대상 방문자</th>
+                      <th style="width: 15%">작업자</th>
+                      <th style="width: 40%">상세 내용</th>
+                    </tr>
+                  </thead>
+                  <tbody id="audit-list">
+                    <!-- JS에서 동적 추가 -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────── -->
+        <!-- 대장 인쇄 패널 -->
+        <!-- ─────────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-ledger" role="tabpanel" style="display:none;">
+          <div class="card no-print">
+            <div class="card-header">
+              <h2 class="card-title"><span class="card-icon">🖨️</span> 관리대장 출력</h2>
+              <p class="card-desc">방문자 출입 관리대장을 기간별로 조회하고 인쇄하거나 엑셀(CSV)로 다운로드합니다.</p>
+            </div>
+            
+            <div style="display:flex; gap:1rem; margin-bottom:1.5rem; align-items:flex-end; flex-wrap:wrap;">
+              <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
+                <label class="form-label" for="ledger-start-date">시작일</label>
+                <input type="date" id="ledger-start-date" class="form-input" />
+              </div>
+              <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
+                <label class="form-label" for="ledger-end-date">종료일</label>
+                <input type="date" id="ledger-end-date" class="form-input" />
+              </div>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button class="btn btn-secondary" onclick="loadLedger()">조회</button>
+                <button class="btn btn-primary" onclick="window.print()">📄 PDF 인쇄</button>
+                <button class="btn btn-ghost" onclick="exportToCSV()" style="border: 1px solid var(--border-color);">📥 CSV 다운로드</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 실제 인쇄될 영역 -->
+          <div id="printable-ledger" class="printable-area card" style="margin-top:1rem; padding: 2rem; overflow-x: auto; background: #fff;">
+            <div class="ledger-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:2rem;">
+              <div style="display: flex; align-items: center; gap: 1.25rem; padding-bottom: 4px;">
+                <img src="./brand/logo/logo-h.svg" alt="Janytree" style="height: 44px; width: auto;">
+                <h1 style="font-size: 30px; font-weight: 800; margin: 0; color:#000; letter-spacing: -0.5px;">방문자 출입 관리대장</h1>
+              </div>
+              <table class="approval-block" style="border-collapse:collapse; text-align:center; font-size:12px; color:#000;">
+                <tr>
+                  <td rowspan="2" style="border:1px solid #000; width:25px; font-weight:bold; background:#f3f4f6;">결<br><br>재</td>
+                  <td style="border:1px solid #000; width:65px; background:#f3f4f6;">작 성</td>
+                  <td style="border:1px solid #000; width:65px; background:#f3f4f6;">검 토</td>
+                  <td style="border:1px solid #000; width:65px; background:#f3f4f6;">승 인</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #000; height:50px;"></td>
+                  <td style="border:1px solid #000;"></td>
+                  <td style="border:1px solid #000;"></td>
+                </tr>
+              </table>
+            </div>
+
+            <table class="ledger-table" style="width:100%; border-collapse:collapse; text-align:center; font-size:0.85rem; color:#000; min-width:800px;">
+              <thead>
+                <tr style="background:#f3f4f6;">
+                  <th style="border:1px solid #000; padding:6px 4px; width:40px;">No</th>
+                  <th style="border:1px solid #000; padding:6px 4px; width:90px;">방문일시</th>
+                  <th style="border:1px solid #000; padding:6px 4px;">소속</th>
+                  <th style="border:1px solid #000; padding:6px 4px;">성명</th>
+                  <th style="border:1px solid #000; padding:6px 4px;">방문 목적</th>
+                  <th style="border:1px solid #000; padding:6px 4px;">안내자</th>
+                  <th style="border:1px solid #000; padding:6px 4px; width:80px;">적합 여부</th>
+                  <th style="border:1px solid #000; padding:6px 4px; width:80px;">최종 결재</th>
+                  <th style="border:1px solid #000; padding:6px 4px; width:60px;">확인</th>
+                </tr>
+              </thead>
+              <tbody id="ledger-tbody">
+                <!-- JS에서 채워짐 -->
+              </tbody>
+            </table>
+
+            <div class="ledger-footer" style="display:flex; justify-content:space-between; margin-top:1rem; font-size:0.75rem; color:#000;">
+              <span>JTQF-3120-05 (Rev.1)</span>
+              <span>1/1</span>
+              <span>(주)제니트리</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 관리자 탭 패널 -->
+        <section class="tab-panel" id="tab-admin" role="tabpanel" style="display:none;">
+          <div class="admin-panel">
+
+            <!-- 직원 추가 폼 -->
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title"><span class="card-icon">➕</span> 안내자 / 승인자 등록</h2>
+                <p class="card-desc">안내자 또는 승인자로 사용할 직원을 등록합니다.</p>
+              </div>
+              <form id="employee-add-form" class="employee-form" onsubmit="handleAddEmployee(event)" novalidate>
+                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:1rem;">
+                  <div class="form-group">
+                    <label class="form-label" for="e-name">이름 <span class="required">*</span></label>
+                    <input type="text" id="e-name" class="form-input" placeholder="홍길동" required maxlength="50" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="e-title">직함 (선택)</label>
+                    <input type="text" id="e-title" class="form-input" placeholder="대리" maxlength="30" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="e-dept-select">부서 (선택)</label>
+                    <select id="e-dept-select" class="form-input form-select" onchange="toggleDeptInput()">
+                      <option value="">부서 없음</option>
+                      <!-- JS에서 기존 부서 목록을 채웁니다 -->
+                      <option value="direct">➕ 새 부서 직접입력...</option>
+                    </select>
+                    <input type="text" id="e-dept-input" class="form-input" placeholder="새 부서명 입력" maxlength="50" style="display:none; margin-top:0.5rem;" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="e-role">역할 <span class="required">*</span></label>
+                    <select id="e-role" class="form-input form-select">
+                      <option value="안내자">가이드(안내자)</option>
+                      <option value="승인자">승인자</option>
+                      <option value="안내자+승인자">가이드+승인자 (겸직)</option>
+                      <option value="admin">관리자 (Admin)</option>
+                    </select>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="add-employee-btn" style="width:100%; margin-top:0.75rem;">
+                  <span>+ 등록하기</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- 등록된 직원 목록 -->
+            <div class="card" style="margin-top: 1.5rem;">
+              <div class="card-header">
+                <h2 class="card-title"><span class="card-icon">👥</span> 등록된 직원 목록</h2>
+              </div>
+              <div id="admin-employee-container">
+                <div class="loading-state" id="admin-emp-loading" style="display:none;">
+                  <div class="spinner"></div>
+                  <p>불러오는 중...</p>
+                </div>
+                <div class="empty-state" id="admin-emp-empty" style="display:none;">
+                  <span class="empty-icon">👤</span>
+                  <p>등록된 직원이 없습니다.</p>
+                </div>
+                <div class="employees-grid" id="admin-employee-list"></div>
+              </div>
+            </div>
+
+            <!-- 비밀번호 변경 -->
+            <div class="card" style="margin-top: 1.5rem;">
+              <div class="card-header">
+                <h2 class="card-title"><span class="card-icon">🔑</span> 관리자 비밀번호 변경</h2>
+              </div>
+              <div style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:180px;">
+                  <label class="form-label">새 비밀번호</label>
+                  <div class="pw-input-wrapper">
+                    <input type="password" id="new-password" class="form-input" placeholder="새 비밀번호" maxlength="20" />
+                    <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility('new-password', this)">👁️</button>
+                  </div>
+                </div>
+                <div class="form-group" style="flex:1; min-width:180px;">
+                  <label class="form-label">비밀번호 확인</label>
+                  <div class="pw-input-wrapper">
+                    <input type="password" id="new-password-confirm" class="form-input" placeholder="비밀번호 확인" maxlength="20" />
+                    <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility('new-password-confirm', this)">👁️</button>
+                  </div>
+                </div>
+                <button class="btn btn-accent" onclick="changeAdminPassword()" style="margin-bottom:0.1rem;">변경</button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+    </div> <!-- /main-content-wrapper -->
+
+
+  </div>
+
+  <!-- ===== 토스트 알림 (성공/실패 메시지 팝업) ===== -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ===== 결재 승인 상세 모달 ===== -->
+  <div class="modal-overlay" id="approval-modal" style="display:none;" onclick="closeApprovalModal()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">결재 승인 상세 내역</h3>
+        <button class="modal-close" onclick="closeApprovalModal()">✕</button>
+      </div>
+      <div class="modal-body" id="approval-modal-body">
+        <!-- JS에서 상세 내용이 채워집니다 -->
+      </div>
+      <div class="modal-actions" id="approval-modal-actions">
+        <button class="btn btn-danger" onclick="submitApproval('반려')">❌ 부적합 (반려)</button>
+        <button class="btn btn-primary" onclick="submitApproval('승인')">✅ 적합 (승인)</button>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+  <!-- 직원 정보 수정 모달 -->
+  <div class="modal-overlay" id="edit-employee-modal" style="display:none;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ 직원 정보 수정</h3>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-employee-form" class="employee-form" onsubmit="submitEditEmployee(event)">
+          <input type="hidden" id="edit-e-id" />
+          <div class="form-group">
+            <label class="form-label" for="edit-e-name">이름 <span class="required">*</span></label>
+            <input type="text" id="edit-e-name" class="form-input" required maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-e-title">직함 (선택)</label>
+            <input type="text" id="edit-e-title" class="form-input" maxlength="30" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-e-dept">부서 (선택)</label>
+            <!-- 수정 창에서는 직접 입력 칸으로 제공 -->
+            <input type="text" id="edit-e-dept" class="form-input" maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-e-role">역할 <span class="required">*</span></label>
+            <select id="edit-e-role" class="form-input form-select">
+              <option value="안내자">가이드(안내자)</option>
+              <option value="승인자">승인자</option>
+              <option value="안내자+승인자">가이드+승인자 (겸직)</option>
+              <option value="admin">관리자 (Admin)</option>
+            </select>
+          </div>
+          <div class="modal-actions" style="margin-top:1.5rem;">
+            <button type="button" class="btn btn-ghost" onclick="closeEditModal()">취소</button>
+            <button type="submit" class="btn btn-primary" id="submit-edit-btn">저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- 커스텀 확인(Confirm) 모달 -->
+  <div class="modal-overlay" id="custom-confirm-modal" style="display:none;" onclick="closeCustomConfirm()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:400px; text-align:center;">
+      <div class="modal-body" style="padding: 2rem 1.5rem 1rem 1.5rem;">
+        <h3 id="custom-confirm-title" style="font-size: 1.25rem; font-weight: bold; margin-bottom: 1rem;">확인</h3>
+        <p id="custom-confirm-message" style="color: var(--text-secondary); margin-bottom: 2rem; white-space: pre-wrap; word-break: keep-all;"></p>
+        <div style="display:flex; gap:0.5rem; justify-content:center;">
+          <button class="btn btn-ghost" style="flex:1;" onclick="closeCustomConfirm()">취소</button>
+          <button class="btn btn-primary" id="custom-confirm-btn" style="flex:1;">확인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 직원 로그인 / 비밀번호 설정(가입) 모달 -->
+  <div class="modal-overlay" id="auth-modal" style="display:none;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="auth-modal-title">🔐 직원 로그인</h3>
+        <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="tab-buttons" style="display:flex; gap:1rem; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+          <button class="btn btn-ghost" id="btn-auth-login" style="flex:1; border-bottom:2px solid var(--primary-color); border-radius:0;" onclick="setAuthMode('login')">로그인</button>
+          <button class="btn btn-ghost" id="btn-auth-signup" style="flex:1; color:var(--text-muted); border-radius:0;" onclick="setAuthMode('signup')">비밀번호 최초설정</button>
+        </div>
+        
+        <p id="auth-desc" style="color:var(--text-secondary); margin-bottom:1rem; font-size:0.9rem;">
+          결재를 위해 이름을 입력하고 로그인하세요.
+        </p>
+
+        <form id="auth-form" onsubmit="submitAuth(event)">
+          <div class="form-group">
+            <label class="form-label">이름 <span class="required">*</span></label>
+            <input type="text" id="auth-name" class="form-input" placeholder="홍길동" required />
+            <small id="auth-name-hint" style="color:var(--text-muted); display:none; margin-top:0.2rem;">※ 관리자가 등록한 이름이어야 합니다.</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="auth-pw-label">비밀번호 <span class="required">*</span></label>
+            <div class="pw-input-wrapper">
+              <input type="password" id="auth-password" class="form-input" placeholder="비밀번호 입력" required />
+              <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility('auth-password', this)">👁️</button>
+            </div>
+          </div>
+          <div class="modal-actions" style="margin-top:1.5rem;">
+            <button type="button" class="btn btn-ghost" onclick="closeAuthModal()">취소</button>
+            <button type="submit" class="btn btn-primary" id="submit-auth-btn">로그인</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase JavaScript SDK (CDN 버전 2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- 우리가 만든 기능 파일 -->
+  <script src="app.js"></script>
+</body>
+</html>
