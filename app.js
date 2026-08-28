@@ -1754,14 +1754,15 @@ function logout() {
   updateAuthUI();
   showToast('로그아웃 되었습니다.', 'success');
   
+  // 관리자(admin) 탭을 보고 있던 중 로그아웃하면 즉시 방문자 등록 탭으로 이동
+  const adminPanel = document.getElementById('tab-admin');
+  if (adminPanel && (adminPanel.classList.contains('active') || adminPanel.style.display !== 'none')) {
+    switchTab('register');
+    return;
+  }
+  
   // 로그아웃 시 현재 활성화된 탭 새로고침 (권한 버튼 즉시 숨김)
   reloadActiveTab();
-  
-  // 결재 승인 탭에 있다면 방문자 등록 탭으로 쫓아내기 (사용자 요청에 따라 유지하거나 쫓아내거나 선택할 수 있으나, 위쪽에서 reloadActiveTab을 했으므로 안전함. 기존 쫓아내기 로직 유지)
-  const approvalPanel = document.getElementById('tab-approval');
-  if (approvalPanel && approvalPanel.classList.contains('active')) {
-    switchTab('register');
-  }
 }
 
 
