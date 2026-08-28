@@ -116,11 +116,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // 저장된 로그인 정보 불러오기 & 헤더 UI 갱신
   initAuth();
 
+  // 결재 대기 건수 뱃지 초기 조회 및 10초 주기 자동 갱신
+  updateApprovalBadgeCount();
+  setInterval(updateApprovalBadgeCount, 10000);
+
   // 초기 탭 데이터를 불러옵니다
   if (document.getElementById('tab-approval').classList.contains('active')) {
     loadPendingApprovals();
   }
 });
+
+// =====================================================================
+// 결재 대기 건수 뱃지 실시간 업데이트 함수
+// =====================================================================
+async function updateApprovalBadgeCount() {
+  const badge = document.getElementById('approval-badge');
+  if (!badge) return;
+
+  try {
+    const { count, error } = await db
+      .from('visitors')
+      .select('*', { count: 'exact', head: true })
+      .eq('approval_status', '대기')
+      .is('deleted_at', null);
+
+    if (error) throw error;
+
+    badge.textContent = (count !== null && count !== undefined) ? count.toString() : '0';
+  } catch (err) {
+    console.error('결재 뱃지 카운트 조회 오류:', err);
+  }
+}
 
 // =====================================================================
 // 탭 전환 기능
@@ -574,6 +600,7 @@ async function handleSave() {
 
     showToast('✅ 방문자 등록이 완료되었습니다!', 'success');
     resetWizard();
+    updateApprovalBadgeCount();
   } catch (err) {
     console.error('저장 오류:', err);
     showToast('저장 중 오류가 발생했습니다: ' + err.message, 'error');
@@ -1222,6 +1249,7 @@ async function submitApproval(decision) {
 
     showToast(`방문자가 성공적으로 ${decision} 처리되었습니다.`, 'success');
     closeApprovalModal();
+    updateApprovalBadgeCount();
     
     // 현재 활성화된 탭에 따라 리스트 새로고침
     const activeTabPanel = document.querySelector('.tab-panel.active');
@@ -2054,6 +2082,7 @@ async function restoreRecord(id) {
       await logAction(id, 'RESTORED', '휴지통에서 복구됨');
       showToast('성공적으로 복구되었습니다.', 'success');
       loadTrash();
+      updateApprovalBadgeCount();
     } catch (err) {
       console.error('복구 오류:', err);
       showToast('복구 처리 중 오류가 발생했습니다.', 'error');
@@ -2088,6 +2117,7 @@ async function hardDeleteRecord(id) {
       
       showToast('영구 삭제되었습니다.', 'success');
       loadTrash();
+      updateApprovalBadgeCount();
     } catch (err) {
       console.error('영구 삭제 오류:', err);
       showToast('영구 삭제 처리 중 오류가 발생했습니다.', 'error');
@@ -2119,6 +2149,7 @@ async function softDeleteRecord(id) {
       // 현재 열려있는 탭에 따라 목록 리프레시
       loadPendingApprovals();
       loadArchiveApprovals('all');
+      updateApprovalBadgeCount();
     } catch (err) {
       console.error('삭제 오류:', err);
       showToast('삭제 처리 중 오류가 발생했습니다.', 'error');
