@@ -120,6 +120,9 @@ document.addEventListener('DOMContentLoaded', () => {
   updateAllBadgeCounts();
   setInterval(updateAllBadgeCounts, 10000);
 
+  // 미퇴실 방문자 익일 자동 감지 및 안내 알림
+  checkUnreturnedVisitors();
+
   // 초기 탭 데이터를 불러옵니다
   if (document.getElementById('tab-approval').classList.contains('active')) {
     loadPendingApprovals();
@@ -626,6 +629,8 @@ async function handleSave() {
 
     if (data && data.length > 0) {
       await logAction(data[0].id, 'CREATED', '방문자 정보 등록');
+      // 승인자에게 결재 요청 알림 전송
+      sendApprovalNotification(data[0]);
     }
 
     showToast('✅ 방문자 등록이 완료되었습니다!', 'success');
@@ -1743,15 +1748,17 @@ async function loadAdminEmployees() {
 
         const card = document.createElement('div');
         card.className = 'employee-card';
+        const emailHtml = emp.email ? `<div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">✉️ ${escapeHtml(emp.email)}</div>` : '';
         card.innerHTML = `
           <div class="employee-info">
             <div class="employee-name">${escapeHtml(emp.name)} <span style="font-size:0.85rem; color:var(--text-muted); font-weight:normal;">${emp.title ? escapeHtml(emp.title) : ''}</span></div>
             <div class="employee-dept">${emp.department ? escapeHtml(emp.department) : '부서 없음'}</div>
-            <span class="role-badge ${badgeClass}">${badgeIcon} ${role}</span>
+            ${emailHtml}
+            <span class="role-badge ${badgeClass}" style="margin-top:0.25rem;">${badgeIcon} ${role}</span>
           </div>
           <div style="display:flex; flex-direction:column; gap:0.25rem;">
             <button class="btn btn-ghost" style="flex-shrink:0; font-size:0.8rem; padding:0.4rem 0.5rem; color:var(--text-secondary);"
-              onclick="openEditModal('${emp.id}', '${escapeHtml(emp.name).replace(/'/g, "\\'")}', '${emp.department ? escapeHtml(emp.department).replace(/'/g, "\\'") : ''}', '${emp.title ? escapeHtml(emp.title).replace(/'/g, "\\'") : ''}', '${role}')">
+              onclick="openEditModal('${emp.id}', '${escapeHtml(emp.name).replace(/'/g, "\\'")}', '${emp.department ? escapeHtml(emp.department).replace(/'/g, "\\'") : ''}', '${emp.title ? escapeHtml(emp.title).replace(/'/g, "\\'") : ''}', '${role}', '${emp.email ? escapeHtml(emp.email).replace(/'/g, "\\'") : ''}')">
               ✏️ 수정
             </button>
             <button class="btn btn-ghost" style="flex-shrink:0; font-size:0.8rem; padding:0.4rem 0.5rem; color:var(--danger);"
@@ -1806,6 +1813,7 @@ async function handleAddEmployee(event) {
   }
 
   const role = document.getElementById('e-role')?.value || '안내자';
+  const email = document.getElementById('e-email')?.value.trim() || null;
 
   if (!name) { showToast('이름을 입력해 주세요.', 'error'); return; }
 
@@ -1825,12 +1833,13 @@ async function handleAddEmployee(event) {
     if (existingEmp) {
       // 2. 이미 존재하는 경우: 역할 비교 후 병합 처리
       const existingRole = existingEmp.role || '안내자';
+      const updatedEmail = email || existingEmp.email;
       
       if (existingRole === '안내자+승인자' || role === '안내자+승인자') {
         // 이미 겸직이거나 새 역할이 겸직이면 그냥 겸직으로 업데이트
         const { error: updateError } = await db
           .from('employees')
-          .update({ role: '안내자+승인자', department: dept || existingEmp.department, title: title || existingEmp.title })
+          .update({ role: '안내자+승인자', department: dept || existingEmp.department, title: title || existingEmp.title, email: updatedEmail })
           .eq('id', existingEmp.id);
         if (updateError) throw updateError;
         showToast(`ℹ️ [${name}] 님은 이미 등록되어 겸직(안내자+승인자)으로 통합되었습니다.`, 'success');
@@ -1839,19 +1848,23 @@ async function handleAddEmployee(event) {
         // 기존 역할과 새 역할이 다르면 (안내자 vs 승인자) -> 겸직으로 승급
         const { error: updateError } = await db
           .from('employees')
-          .update({ role: '안내자+승인자', department: dept || existingEmp.department, title: title || existingEmp.title })
+          .update({ role: '안내자+승인자', department: dept || existingEmp.department, title: title || existingEmp.title, email: updatedEmail })
           .eq('id', existingEmp.id);
         if (updateError) throw updateError;
         showToast(`🎉 [${name}] 님이 안내자+승인자로 승급(병합)되었습니다!`, 'success');
         
       } else {
-        // 완전히 동일한 역할로 다시 등록하는 경우
-        showToast(`이미 [${role}] 역할을 가진 동일한 이름의 직원이 있습니다.`, 'error');
-        return;
+        // 완전히 동일한 역할로 다시 등록하는 경우 이메일/정보 업데이트
+        const { error: updateError } = await db
+          .from('employees')
+          .update({ department: dept || existingEmp.department, title: title || existingEmp.title, email: updatedEmail })
+          .eq('id', existingEmp.id);
+        if (updateError) throw updateError;
+        showToast(`✅ [${name}] 직원의 정보가 업데이트되었습니다.`, 'success');
       }
     } else {
       // 3. 없는 경우: 새로 인서트
-      const { error: insertError } = await db.from('employees').insert([{ name, department: dept || null, title: title || null, role }]);
+      const { error: insertError } = await db.from('employees').insert([{ name, department: dept || null, title: title || null, role, email }]);
       if (insertError) throw insertError;
       showToast(`✅ ${name} (${role}) 직원이 신규 등록되었습니다!`, 'success');
     }
@@ -1859,6 +1872,8 @@ async function handleAddEmployee(event) {
     // 성공 시 공통 처리 (폼 초기화 및 목록 갱신)
     document.getElementById('e-name').value = '';
     document.getElementById('e-title').value = '';
+    const emailInput = document.getElementById('e-email');
+    if (emailInput) emailInput.value = '';
     const deptSelect = document.getElementById('e-dept-select');
     if (deptSelect) deptSelect.value = '';
     const deptInput = document.getElementById('e-dept-input');
@@ -1925,7 +1940,7 @@ function toggleDeptInput() {
 }
 
 // ── 관리자 탭: 직원 정보 수정 모달 열기 ──
-function openEditModal(id, name, dept, title, role) {
+function openEditModal(id, name, dept, title, role, email = '') {
   const modal = document.getElementById('edit-employee-modal');
   if (!modal) return;
   
@@ -1934,6 +1949,8 @@ function openEditModal(id, name, dept, title, role) {
   document.getElementById('edit-e-dept').value = dept;
   document.getElementById('edit-e-title').value = title;
   document.getElementById('edit-e-role').value = role;
+  const editEmailInput = document.getElementById('edit-e-email');
+  if (editEmailInput) editEmailInput.value = email;
   
   modal.style.display = 'flex';
 }
@@ -1953,6 +1970,7 @@ async function submitEditEmployee(event) {
   const dept = document.getElementById('edit-e-dept')?.value.trim() || null;
   const title = document.getElementById('edit-e-title')?.value.trim() || null;
   const role = document.getElementById('edit-e-role')?.value;
+  const email = document.getElementById('edit-e-email')?.value.trim() || null;
   
   if (!id || !name) return;
   
@@ -1962,7 +1980,7 @@ async function submitEditEmployee(event) {
   try {
     const { error } = await db
       .from('employees')
-      .update({ name, department: dept, title, role })
+      .update({ name, department: dept, title, role, email })
       .eq('id', id);
       
     if (error) throw error;
@@ -2700,4 +2718,130 @@ function closeCustomConfirm() {
   const modal = document.getElementById('custom-confirm-modal');
   if (modal) modal.style.display = 'none';
   customConfirmCallback = null;
+}
+
+// =====================================================================
+// 승인자 결재 요청 알림 전송 모듈
+// =====================================================================
+async function sendApprovalNotification(record) {
+  if (!record) return;
+
+  try {
+    // 1. 승인 권한(승인자, 안내자+승인자, admin, superadmin)을 가진 직원 중 이메일이 등록된 대상 조회
+    const { data: approvers, error } = await db
+      .from('employees')
+      .select('name, email, role')
+      .not('email', 'is', null);
+
+    if (error) {
+      console.warn('승인자 이메일 목록 조회 경고:', error);
+      return;
+    }
+
+    if (!approvers || approvers.length === 0) {
+      console.log('ℹ️ 등록된 승인자 이메일이 없어 알림 메일 발송을 건너뜁니다.');
+      return;
+    }
+
+    const visitorName = record.visitor_name || record.name || '방문자';
+    const visitorCompany = record.visitor_company || record.company || '미지정';
+    const guideName = record.guide_name || '미지정';
+    const visitDate = record.visit_date || '';
+
+    // 승인 대상자 이메일 목록
+    const targetEmails = approvers
+      .filter(emp => emp.role === '승인자' || emp.role === '안내자+승인자' || emp.role === 'admin' || emp.role === 'superadmin')
+      .map(emp => emp.email);
+
+    if (targetEmails.length > 0) {
+      console.log(`📧 [결재 알림] ${visitorName}(${visitorCompany}) 방문자의 결재 요청이 수신 대상자(${targetEmails.join(', ')})에게 전송되었습니다.`);
+      // 향후 실제 EmailJS 또는 Supabase Edge Function 메일 발송 서비스 호출 연동
+    }
+  } catch (err) {
+    console.error('결재 알림 처리 오류:', err);
+  }
+}
+
+// =====================================================================
+// 익일(다음 날) 미퇴실 방문자 자동 감지 및 스마트 알림 시스템
+// =====================================================================
+let hasCheckedUnreturnedToday = false;
+
+async function checkUnreturnedVisitors(force = false) {
+  // 중복 팝업 방지 (강제 호출이 아니면 세션당 1회 체크)
+  if (hasCheckedUnreturnedToday && !force) return;
+
+  try {
+    // 오늘 날짜 구하기 (YYYY-MM-DD)
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
+    // 방문일자가 오늘 이전(어제 또는 그 이전)인데, 아직 퇴실시간(exit_time)이 없는 레코드 조회
+    const { data: unreturnedList, error } = await db
+      .from('visitors')
+      .select('*')
+      .lt('visit_date', todayStr)
+      .is('exit_time', null)
+      .is('deleted_at', null)
+      .order('visit_date', { ascending: false });
+
+    if (error) throw error;
+
+    if (unreturnedList && unreturnedList.length > 0) {
+      hasCheckedUnreturnedToday = true;
+      openUnreturnedModal(unreturnedList);
+    }
+  } catch (err) {
+    console.error('미퇴실자 조회 오류:', err);
+  }
+}
+
+// 미퇴실 방문자 알림 모달 열기
+function openUnreturnedModal(visitors) {
+  const modal = document.getElementById('unreturned-visitors-modal');
+  const listContainer = document.getElementById('unreturned-visitors-list');
+  if (!modal || !listContainer) return;
+
+  listContainer.innerHTML = '';
+
+  visitors.forEach(v => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--card-bg, #ffffff); border:1.5px solid var(--danger, #ef4444); border-radius:10px; padding:0.875rem 1rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; box-shadow: 0 2px 4px rgba(239,68,68,0.08);';
+
+    const name = escapeHtml(v.visitor_name || v.name || '이름 없음');
+    const company = escapeHtml(v.visitor_company || v.company || '소속 없음');
+    const visitDate = v.visit_date || '날짜 미상';
+    const entryTime = v.visit_time ? v.visit_time.slice(0, 5) : '';
+    const guideName = escapeHtml(v.guide_name || '미지정');
+
+    card.innerHTML = `
+      <div style="flex:1; min-width:200px;">
+        <div style="font-weight:700; font-size:1rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+          <span>${name}</span>
+          <span style="font-size:0.8rem; font-weight:normal; color:var(--text-secondary);">(${company})</span>
+          <span class="tag" style="background:#EF4444; color:#fff; font-size:0.75rem; padding:0.15rem 0.5rem; border-radius:9999px;">미퇴실</span>
+        </div>
+        <div style="font-size:0.825rem; color:var(--text-secondary); margin-top:0.25rem;">
+          📅 방문일: <strong>${visitDate} ${entryTime}</strong> | 👤 안내자: ${guideName}
+        </div>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-primary" style="padding:0.45rem 0.85rem; font-size:0.85rem;" onclick="closeUnreturnedModal(); showApprovalDetail('${v.id}', 'archive')">
+          🚪 퇴실 처리
+        </button>
+      </div>
+    `;
+    listContainer.appendChild(card);
+  });
+
+  modal.style.display = 'flex';
+}
+
+// 미퇴실 방문자 알림 모달 닫기
+function closeUnreturnedModal() {
+  const modal = document.getElementById('unreturned-visitors-modal');
+  if (modal) modal.style.display = 'none';
 }

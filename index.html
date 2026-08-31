@@ -788,6 +788,10 @@
                       <option value="admin">관리자 (Admin)</option>
                     </select>
                   </div>
+                  <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label" for="e-email">이메일 (알림 수신용, 선택)</label>
+                    <input type="email" id="e-email" class="form-input" placeholder="user@janytree.com" maxlength="100" />
+                  </div>
                 </div>
                 <button type="submit" class="btn btn-primary" id="add-employee-btn" style="width:100%; margin-top:0.75rem;">
                   <span>+ 등록하기</span>
@@ -902,6 +906,10 @@
               <option value="admin">관리자 (Admin)</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-e-email">이메일 (알림 수신용, 선택)</label>
+            <input type="email" id="edit-e-email" class="form-input" placeholder="user@janytree.com" maxlength="100" />
+          </div>
           <div class="modal-actions" style="margin-top:1.5rem;">
             <button type="button" class="btn btn-ghost" onclick="closeEditModal()">취소</button>
             <button type="submit" class="btn btn-primary" id="submit-edit-btn">저장</button>
@@ -909,6 +917,29 @@
         </form>
       </div>
     </div>
+  </div>
+
+  <!-- 미퇴실 방문자 익일 알림 모달 -->
+  <div class="modal-overlay" id="unreturned-visitors-modal" style="display:none;" onclick="closeUnreturnedModal()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()" style="max-width: 650px;">
+      <div class="modal-header" style="border-bottom: 2px solid var(--danger);">
+        <h3 class="modal-title" style="color: var(--danger); display:flex; align-items:center; gap:0.5rem;">
+          <span>⚠️</span> <span>미퇴실 방문자 익일 확인 알림</span>
+        </h3>
+        <button class="modal-close" onclick="closeUnreturnedModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <p style="margin-bottom: 1rem; color: var(--text-primary); line-height: 1.6; word-break: keep-all;">
+          방문 당일 퇴실 처리가 되지 않은 방문자가 발견되었습니다.<br />
+          아래 목록을 확인하시고 <strong>[퇴실 기록]</strong>을 눌러 퇴실 처리를 완료해 주세요.
+        </p>
+        <div id="unreturned-visitors-list" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 360px; overflow-y: auto;">
+          <!-- JS에서 미퇴실자 카드들이 렌더링됩니다 -->
+        </div>
+      </div>
+      <div class="modal-actions" style="padding: 1rem 1.5rem; justify-content: flex-end;">
+        <button class="btn btn-primary" onclick="closeUnreturnedModal()">확인 완료</button>
+      </div>
     </div>
   </div>
 
