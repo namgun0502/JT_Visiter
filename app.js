@@ -36,7 +36,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // =====================================================================
 // EmailJS 대시보드 > Account > General에서 Public Key를 확인하세요.
 const EMAILJS_SERVICE_ID         = 'service_0cyzivm';   // EmailJS 서비스 ID
-const EMAILJS_TEMPLATE_ID        = 'template_m21ewqk';  // 결재 요청용 템플릿 ID (승인자에게)
+const EMAILJS_TEMPLATE_ID        = 'template_m21ewqk';  // 결재 요청 및 미퇴실 알림용 템플릿 ID (승인자에게)
 const EMAILJS_RESULT_TEMPLATE_ID = 'template_4tsp06k';  // 결재 결과용 템플릿 ID (등록자/안내자에게)
 const EMAILJS_PUBLIC_KEY         = 'M64VkGri7Omu6w38j';    // EmailJS Public Key
 
@@ -2783,10 +2783,13 @@ async function sendApprovalNotification(record) {
       const templateParams = {
         to_email:        approver.email,       // 수신자 이메일
         to_name:         approver.name,        // 수신자 이름
+        email_title:     `[결재 요청] ${visitorName}님의 방문 결재 승인이 필요합니다`,
+        message_intro:   'JT 방문자 관리 시스템에서 결재 승인 요청이 도착했습니다.',
         visitor_name:    visitorName,          // 방문자 이름
         visitor_company: visitorCompany,       // 방문자 소속
         guide_name:      guideName,            // 안내자 이름
         visit_date:      visitDate,            // 방문 날짜
+        details:         `• 방문자 이름 : ${visitorName}\n• 소속 회사   : ${visitorCompany}\n• 방문 날짜   : ${visitDate}\n• 안내자      : ${guideName}`,
         app_url:         appUrl,               // 시스템 접속 링크
       };
 
@@ -2895,9 +2898,68 @@ async function checkUnreturnedVisitors(force = false) {
     if (unreturnedList && unreturnedList.length > 0) {
       hasCheckedUnreturnedToday = true;
       openUnreturnedModal(unreturnedList);
+
+      // 결재승인자에게 미퇴실 이메일 알림 전송 (하루 1회 제한)
+      sendUnreturnedNotification(unreturnedList, todayStr);
     }
   } catch (err) {
     console.error('미퇴실자 조회 오류:', err);
+  }
+}
+
+// 미퇴실자 결재승인자 이메일 발송 모듈 (기존 템플릿 template_m21ewqk 재사용)
+async function sendUnreturnedNotification(unreturnedList, todayStr) {
+  // 하루 1회만 발송되도록 localStorage로 체크
+  const sentKey = `unreturned_email_sent_${todayStr}`;
+  if (localStorage.getItem(sentKey)) {
+    return;
+  }
+
+  try {
+    // 결재승인자별로 미퇴실 방문자 그룹핑
+    const approverMap = {};
+    unreturnedList.forEach(v => {
+      const appName = v.approver_name || '미지정';
+      if (!approverMap[appName]) approverMap[appName] = [];
+      approverMap[appName].push(v);
+    });
+
+    const appUrl = window.location.origin + window.location.pathname;
+
+    for (const [appName, list] of Object.entries(approverMap)) {
+      if (appName === '미지정') continue;
+
+      const { data: targetEmp, error } = await db
+        .from('employees')
+        .select('name, email')
+        .eq('name', appName)
+        .not('email', 'is', null);
+
+      if (error || !targetEmp || targetEmp.length === 0 || !targetEmp[0].email) continue;
+
+      const approver = targetEmp[0];
+      const unreturnedDetails = list.map((item, idx) => `[${idx + 1}] 방문자: ${item.visitor_name || item.name} | 소속: ${item.visitor_company || item.company || '미지정'} | 방문일: ${item.visit_date} | 안내자: ${item.guide_name || '미지정'}`).join('\n');
+
+      const templateParams = {
+        to_email:        approver.email,
+        to_name:         approver.name,
+        email_title:     `[미퇴실 경고] 퇴실 미처리 방문자가 ${list.length}건 있습니다`,
+        message_intro:   `방문일자가 경과하였으나 아직 퇴실 처리가 완료되지 않은 방문자가 총 ${list.length}건 감지되었습니다.\n내용을 확인하시고 퇴실 처리를 완료해 주시기 바랍니다.`,
+        visitor_name:    list.map(i => i.visitor_name || i.name).join(', '),
+        visitor_company: list.map(i => i.visitor_company || i.company || '미지정').join(', '),
+        guide_name:      list.map(i => i.guide_name || '미지정').join(', '),
+        visit_date:      list.map(i => i.visit_date).join(', '),
+        details:         unreturnedDetails,
+        app_url:         appUrl
+      };
+
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+      console.log(`🚨 [미퇴실 알림] ${approver.name}(${approver.email})에게 미퇴실 ${list.length}건 경고 메일 발송 완료`);
+    }
+
+    localStorage.setItem(sentKey, 'true');
+  } catch (err) {
+    console.error('미퇴실 이메일 발송 오류:', err);
   }
 }
 
