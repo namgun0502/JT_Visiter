@@ -2787,6 +2787,7 @@ async function sendApprovalNotification(record) {
     }
 
     // 4. 각 승인자에게 이메일 발송 (EmailJS 호출)
+    const appUrl = window.location.origin + window.location.pathname;
     const sendPromises = targetApprovers.map(approver => {
       const templateParams = {
         to_email:        approver.email,       // 수신자 이메일
@@ -2795,6 +2796,7 @@ async function sendApprovalNotification(record) {
         visitor_company: visitorCompany,       // 방문자 소속
         guide_name:      guideName,            // 안내자 이름
         visit_date:      visitDate,            // 방문 날짜
+        app_url:         appUrl,               // 시스템 접속 링크
       };
       return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
     });
@@ -2856,6 +2858,7 @@ async function sendApprovalResultNotification(record, decision) {
     const visitorName = record.visitor_name || record.name || '방문자';
     const visitorCompany = record.visitor_company || record.company || '미지정';
     const approverName = (currentUser && currentUser.name) ? currentUser.name : (record.approver_name || '결재자');
+    const appUrl = window.location.origin + window.location.pathname;
 
     const templateParams = {
       to_email:        guideEmail,                    // 수신자(안내자) 이메일
@@ -2864,7 +2867,8 @@ async function sendApprovalResultNotification(record, decision) {
       visitor_name:    visitorName,                   // 방문자 이름
       visitor_company: visitorCompany,                // 방문자 소속
       approver_name:   approverName,                  // 결재 처리자
-      approved_at:     new Date().toLocaleString('ko-KR') // 결재 일시
+      approved_at:     new Date().toLocaleString('ko-KR'), // 결재 일시
+      app_url:         appUrl,                        // 시스템 접속 링크
     };
 
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_RESULT_TEMPLATE_ID, templateParams);
