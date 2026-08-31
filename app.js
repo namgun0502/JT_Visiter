@@ -32,6 +32,17 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // =====================================================================
+// EmailJS 설정 (이메일 알림 발송용)
+// =====================================================================
+// EmailJS 대시보드 > Account > General에서 Public Key를 확인하세요.
+const EMAILJS_SERVICE_ID  = 'service_0cyzivm';   // EmailJS 서비스 ID
+const EMAILJS_TEMPLATE_ID = 'template_m21ewqk';  // EmailJS 템플릿 ID
+const EMAILJS_PUBLIC_KEY  = 'M64VkGri7Omu6w38j';    // EmailJS Public Key
+
+// EmailJS SDK 초기화 (앱 시작 시 1회 실행)
+emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
+// =====================================================================
 // 2. 위자드 상태 관리
 // =====================================================================
 // 현재 몇 번째 단계에 있는지 추적합니다 (1~4)
@@ -629,8 +640,11 @@ async function handleSave() {
 
     if (data && data.length > 0) {
       await logAction(data[0].id, 'CREATED', '방문자 정보 등록');
-      // 승인자에게 결재 요청 알림 전송
-      sendApprovalNotification(data[0]);
+      // 알림 발송 체크박스가 체크된 경우에만 이메일 전송
+      const shouldNotify = document.getElementById('s4-send-notification')?.checked ?? true;
+      if (shouldNotify) {
+        sendApprovalNotification(data[0]);
+      }
     }
 
     showToast('✅ 방문자 등록이 완료되었습니다!', 'success');
@@ -2721,10 +2735,16 @@ function closeCustomConfirm() {
 }
 
 // =====================================================================
-// 승인자 결재 요청 알림 전송 모듈
+// 승인자 결재 요청 알림 전송 모듈 (EmailJS 연동)
 // =====================================================================
 async function sendApprovalNotification(record) {
   if (!record) return;
+
+  // EmailJS Public Key가 설정되지 않은 경우 발송 스킵
+  if (!EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') {
+    console.warn('⚠️ EmailJS Public Key가 설정되지 않아 이메일 발송을 건너뜁니다.\napp.js 상단의 EMAILJS_PUBLIC_KEY 값을 입력하세요.');
+    return;
+  }
 
   try {
     // 1. 승인 권한(승인자, 안내자+승인자, admin, superadmin)을 가진 직원 중 이메일이 등록된 대상 조회
@@ -2739,24 +2759,51 @@ async function sendApprovalNotification(record) {
     }
 
     if (!approvers || approvers.length === 0) {
-      console.log('ℹ️ 등록된 승인자 이메일이 없어 알림 메일 발송을 건너뜁니다.');
+      console.log('ℹ️ 등록된 이메일이 있는 직원이 없어 알림 메일 발송을 건너뜁니다.');
       return;
     }
 
-    const visitorName = record.visitor_name || record.name || '방문자';
+    // 2. 방문자 정보 정리
+    const visitorName    = record.visitor_name    || record.name    || '방문자';
     const visitorCompany = record.visitor_company || record.company || '미지정';
-    const guideName = record.guide_name || '미지정';
-    const visitDate = record.visit_date || '';
+    const guideName      = record.guide_name      || '미지정';
+    const visitDate      = record.visit_date      || '';
 
-    // 승인 대상자 이메일 목록
-    const targetEmails = approvers
-      .filter(emp => emp.role === '승인자' || emp.role === '안내자+승인자' || emp.role === 'admin' || emp.role === 'superadmin')
-      .map(emp => emp.email);
+    // 3. 발송 대상: 승인자/admin/superadmin 역할의 직원만 추출
+    const targetApprovers = approvers.filter(emp =>
+      emp.role === '승인자' || emp.role === '안내자+승인자' || emp.role === 'admin' || emp.role === 'superadmin'
+    );
 
-    if (targetEmails.length > 0) {
-      console.log(`📧 [결재 알림] ${visitorName}(${visitorCompany}) 방문자의 결재 요청이 수신 대상자(${targetEmails.join(', ')})에게 전송되었습니다.`);
-      // 향후 실제 EmailJS 또는 Supabase Edge Function 메일 발송 서비스 호출 연동
+    if (targetApprovers.length === 0) {
+      console.log('ℹ️ 승인자 역할의 직원이 없어 알림 메일 발송을 건너뜁니다.');
+      return;
     }
+
+    // 4. 각 승인자에게 이메일 발송 (EmailJS 호출)
+    const sendPromises = targetApprovers.map(approver => {
+      const templateParams = {
+        to_email:        approver.email,       // 수신자 이메일
+        to_name:         approver.name,        // 수신자 이름
+        visitor_name:    visitorName,          // 방문자 이름
+        visitor_company: visitorCompany,       // 방문자 소속
+        guide_name:      guideName,            // 안내자 이름
+        visit_date:      visitDate,            // 방문 날짜
+      };
+      return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+    });
+
+    const results = await Promise.allSettled(sendPromises);
+
+    results.forEach((result, idx) => {
+      if (result.status === 'fulfilled') {
+        console.log(`✅ [결재 알림] ${targetApprovers[idx].name}(${targetApprovers[idx].email}) 발송 성공`);
+      } else {
+        console.error(`❌ [결재 알림] ${targetApprovers[idx].name}(${targetApprovers[idx].email}) 발송 실패:`, result.reason);
+      }
+    });
+
+    showToast('📧 결재 승인자에게 알림 이메일을 발송했습니다.', 'info');
+
   } catch (err) {
     console.error('결재 알림 처리 오류:', err);
   }
