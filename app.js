@@ -3293,7 +3293,14 @@ async function checkUnreturnedVisitors(force = false) {
 
 // 미퇴실자 결재승인자 이메일 발송 모듈 (기존 템플릿 template_m21ewqk 재사용)
 async function sendUnreturnedNotification(unreturnedList, todayStr) {
-  // 하루 1회만 발송되도록 localStorage로 체크
+  // 1. 발송 시간 체크: 다음 날 오전 9시(09:00) 이후에만 발송
+  const currentHour = new Date().getHours();
+  if (currentHour < 9) {
+    console.log('ℹ️ 퇴실 미처리 알림은 다음 날 오전 9시 이후에 발송됩니다. (현재 시각: ' + currentHour + '시)');
+    return;
+  }
+
+  // 2. 하루 1회만 발송되도록 localStorage로 체크
   const sentKey = `unreturned_email_sent_${todayStr}`;
   if (localStorage.getItem(sentKey)) {
     return;
