@@ -1203,6 +1203,13 @@ async function showApprovalDetail(id, mode = 'view') {
 
     document.getElementById('approval-modal').style.display = 'flex';
     
+    // 미저장 감지를 위한 모달 초기 상태 저장
+    initialDetailModalState = {
+      visitDate: data.visit_date || '',
+      visitTime: data.visit_time ? data.visit_time.slice(0, 5) : '',
+      exitTime: data.exit_time ? data.exit_time.slice(0, 5) : ''
+    };
+
     // 타임라인 데이터 불러와서 채우기
     renderTimeline(id, document.getElementById('timeline-container'));
 
@@ -1270,9 +1277,43 @@ async function showApprovalDetail(id, mode = 'view') {
   }
 }
 
+let initialDetailModalState = null;
+
+// 모달 닫기 (미저장 변경사항 체크)
 function closeApprovalModal() {
+  if (initialDetailModalState) {
+    const dateInput = document.getElementById('detail-visit-date');
+    const timeInput = document.getElementById('detail-visit-time');
+    const exitTimeInput = document.getElementById('detail-exit-time');
+
+    const currentDate = dateInput ? dateInput.value : initialDetailModalState.visitDate;
+    const currentTime = timeInput ? timeInput.value : initialDetailModalState.visitTime;
+    const currentExitTime = exitTimeInput ? exitTimeInput.value : initialDetailModalState.exitTime;
+
+    const isDirty = (dateInput && currentDate !== initialDetailModalState.visitDate) ||
+                    (timeInput && currentTime !== initialDetailModalState.visitTime) ||
+                    (exitTimeInput && currentExitTime !== initialDetailModalState.exitTime);
+
+    if (isDirty) {
+      showCustomConfirm(
+        '저장되지 않은 변경사항',
+        '입력하거나 수정한 내용이 아직 저장되지 않았습니다.\n저장하지 않고 창을 닫으시겠습니까?',
+        () => {
+          forceCloseApprovalModal();
+        }
+      );
+      return;
+    }
+  }
+
+  forceCloseApprovalModal();
+}
+
+// 강제 모달 닫기
+function forceCloseApprovalModal() {
   document.getElementById('approval-modal').style.display = 'none';
   currentApprovalRecordId = null;
+  initialDetailModalState = null;
 }
 
 async function submitApproval(decision) {
@@ -1352,10 +1393,34 @@ async function saveDetailVisitDateTime(id, oldDate, oldTime) {
   const newTime = timeInput.value;
 
   try {
-    const { error } = await db.from('visitors').update({
+    // 1. 현재 데이터의 퇴실 시간 확인 (유효성 검증)
+    const { data: record, error: fetchErr } = await db
+      .from('visitors')
+      .select('exit_time')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+
+    // 이미 퇴실 시간이 있는 경우: 입실 시간이 퇴실 시간보다 늦을 수 없음
+    if (record && record.exit_time) {
+      const exitTimeShort = record.exit_time.slice(0, 5);
+      if (newTime > exitTimeShort) {
+        showToast(`⚠️ 입실 시각(${newTime})은 퇴실 시각(${exitTimeShort})보다 늦을 수 없습니다.`, 'error');
+        return;
+      }
+    }
+
+    // 2. 입실 일시 업데이트 (퇴실일도 항상 입실일과 일치하도록 동기화)
+    const updatePayload = {
       visit_date: newDate,
       visit_time: newTime
-    }).eq('id', id);
+    };
+    if (record && record.exit_time) {
+      updatePayload.exit_date = newDate;
+    }
+
+    const { error } = await db.from('visitors').update(updatePayload).eq('id', id);
 
     if (error) throw error;
 
@@ -1363,6 +1428,12 @@ async function saveDetailVisitDateTime(id, oldDate, oldTime) {
     await logAction(id, 'UPDATED', `방문 일시 수정됨: [${oldDate} ${oldTime}] ➔ [${newDate} ${newTime}] (수정자: ${actor})`);
     
     showToast('📅 방문 일시가 성공적으로 수정되었습니다.', 'success');
+
+    // 미저장 변경사항 상태 갱신
+    if (initialDetailModalState) {
+      initialDetailModalState.visitDate = newDate;
+      initialDetailModalState.visitTime = newTime;
+    }
 
     // 모달 새로고침
     if (document.getElementById('approval-modal').style.display !== 'none') {
@@ -1421,6 +1492,10 @@ async function cancelExitTime(id) {
       await logAction(id, 'UPDATED', '퇴실 기록 취소됨 (체류 중으로 변경)');
       showToast('퇴실 기록이 취소되었습니다.', 'success');
 
+      if (initialDetailModalState) {
+        initialDetailModalState.exitTime = '';
+      }
+
       // 상세 모달이 열려있으면 다시 로드
       if (document.getElementById('approval-modal').style.display !== 'none') {
         showApprovalDetail(id, 'view');
@@ -1440,11 +1515,29 @@ async function cancelExitTime(id) {
   });
 }
 
-// 4. 퇴실 시간 데이터베이스 실제 업데이트 및 로깅
+// 4. 퇴실 시간 데이터베이스 실제 업데이트 및 로깅 (유효성 검증 포함)
 async function recordExitTime(id, exitTime, keepModalOpen = false) {
   try {
-    const now = new Date();
-    const exitDate = now.toISOString().slice(0, 10);
+    // 1. 해당 방문자의 입실 일자 및 입실 시간 조회
+    const { data: record, error: fetchErr } = await db
+      .from('visitors')
+      .select('visit_date, visit_time')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+
+    // 2. 유효성 검증: 퇴실 시간은 입실 시간보다 빠를 수 없음
+    if (record && record.visit_time) {
+      const visitTimeShort = record.visit_time.slice(0, 5);
+      if (exitTime < visitTimeShort) {
+        showToast(`⚠️ 퇴실 시각(${exitTime})은 입실 시각(${visitTimeShort})보다 빠를 수 없습니다.`, 'error');
+        return;
+      }
+    }
+
+    // 3. 퇴실일은 무조건 입실일(visit_date)과 동일하게 설정
+    const exitDate = (record && record.visit_date) ? record.visit_date : new Date().toISOString().slice(0, 10);
     const actor = currentUser ? `${currentUser.name} (${currentUser.role})` : '안내자/관리자';
 
     const { error } = await db.from('visitors').update({
@@ -1457,6 +1550,10 @@ async function recordExitTime(id, exitTime, keepModalOpen = false) {
 
     await logAction(id, 'EXITED', `퇴실(나간 시각: ${exitTime}) 처리됨 (확인자: ${actor})`);
     showToast(`🚪 퇴실 시각(${exitTime})이 기록되었습니다.`, 'success');
+
+    if (initialDetailModalState) {
+      initialDetailModalState.exitTime = exitTime;
+    }
 
     // 상세 모달이 열려있으면 다시 로드
     if (keepModalOpen && document.getElementById('approval-modal').style.display !== 'none') {
