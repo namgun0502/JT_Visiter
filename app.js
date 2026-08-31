@@ -755,16 +755,20 @@ async function loadPendingApprovals() {
         const canApprove = currentUser &&
           (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin');
 
+        const exitBadge = record.exit_time 
+          ? `<span class="tag" style="background:#4B5563; color:#fff; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle; margin-left:0.3rem;">🚪 퇴실: ${record.exit_time.slice(0,5)}</span>`
+          : `<span class="tag" style="background:#2563EB; color:#fff; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle; margin-left:0.3rem;">🏢 체류 중</span>`;
+
         const card = document.createElement('div');
         card.className = 'record-card';
         card.innerHTML = `
           <div class="record-header">
-            <h3 class="record-name">${record.visitor_name || record.name || '이름 없음'} <span class="tag tag-pending">승인 대기</span></h3>
-            <span class="record-date">${record.visit_date} ${record.visit_time || ''}</span>
+            <h3 class="record-name">${escapeHtml(record.visitor_name || record.name || '이름 없음')} <span class="tag tag-pending">승인 대기</span>${exitBadge}</h3>
+            <span class="record-date">${record.visit_date} ${record.visit_time ? record.visit_time.slice(0,5) : ''}</span>
           </div>
           <div class="record-body">
-            <p><strong>회사:</strong> ${record.visitor_company || record.company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || record.purpose || ''}</p>
-            <p><strong>안내자:</strong> ${record.guide_name || '미지정'} &nbsp; <strong>평가:</strong> ${
+            <p><strong>회사:</strong> ${escapeHtml(record.visitor_company || record.company || 'N/A')} &nbsp; <strong>목적:</strong> ${escapeHtml(record.visit_purpose || record.purpose || '')}</p>
+            <p><strong>안내자:</strong> ${escapeHtml(record.guide_name || '미지정')} &nbsp; <strong>평가:</strong> ${
               record.fitness_status === '적합' 
                 ? '<span style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle;">적합</span>' 
                 : record.fitness_status === '부적합' 
@@ -772,19 +776,30 @@ async function loadPendingApprovals() {
                   : '<span style="color:var(--text-muted);">미선택</span>'
             }</p>
           </div>
-          <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
+          <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap; align-items:center;">
             <!-- 상세보기: 누구나 (모달에 결재버튼 없음) -->
-            <button class="btn btn-ghost" style="flex:1; min-width:120px;"
+            <button class="btn btn-ghost" style="flex:1; min-width:100px;"
               onclick="showApprovalDetail('${record.id}', 'view')">
-              🔍 상세 보기
+              🔍 상세
             </button>
+            <!-- 퇴실 기록 버튼 -->
+            ${record.exit_time
+              ? `<button class="btn btn-ghost" style="padding:0.45rem 0.75rem; font-size:0.8rem; border:1px solid rgba(255,255,255,0.15);"
+                  onclick="quickExitRecord('${record.id}')" title="퇴실 시간 수정">
+                  🚪 퇴실수정
+                </button>`
+              : `<button class="btn btn-secondary" style="padding:0.45rem 0.75rem; font-size:0.8rem;"
+                  onclick="quickExitRecord('${record.id}')" title="현재 시각으로 퇴실 기록">
+                  🚪 퇴실
+                </button>`
+            }
             <!-- 결재: 승인자 권한만 (모달에 결재버튼 있음) -->
             ${canApprove
-              ? `<button class="btn btn-primary" style="flex:1; min-width:120px;"
+              ? `<button class="btn btn-primary" style="flex:1; min-width:110px;"
                   onclick="showApprovalDetail('${record.id}', 'approve')">
                   ✅ 결재하기
                 </button>`
-              : `<button class="btn btn-ghost" style="flex:1; min-width:120px; opacity:0.45; cursor:not-allowed;"
+              : `<button class="btn btn-ghost" style="flex:1; min-width:110px; opacity:0.45; cursor:not-allowed;"
                   title="승인자 권한이 필요합니다" disabled>
                   🔒 결재 (권한없음)
                 </button>`
@@ -899,16 +914,20 @@ async function loadArchiveApprovals(filter = 'all') {
           ? `<span class="tag tag-approved" style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle; margin-left:0.5rem;">적합(승인)</span>` 
           : `<span class="tag tag-rejected" style="display:inline-block; background:#B91C1C; color:#fff; border:1.5px solid #B91C1C; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle; margin-left:0.5rem;">부적합(반려)</span>`;
 
+        const exitBadge = record.exit_time 
+          ? `<span class="tag" style="background:#4B5563; color:#fff; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle; margin-left:0.3rem;">🚪 퇴실: ${record.exit_time.slice(0,5)}</span>`
+          : `<span class="tag" style="background:#2563EB; color:#fff; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle; margin-left:0.3rem;">🏢 체류 중</span>`;
+
         const card = document.createElement('div');
         card.className = 'record-card';
         card.innerHTML = `
           <div class="record-header">
-            <h3 class="record-name">${record.visitor_name || record.name || '이름 없음'} ${statusTag}</h3>
-            <span class="record-date">${record.visit_date} ${record.visit_time || ''}</span>
+            <h3 class="record-name">${escapeHtml(record.visitor_name || record.name || '이름 없음')} ${statusTag}${exitBadge}</h3>
+            <span class="record-date">${record.visit_date} ${record.visit_time ? record.visit_time.slice(0,5) : ''}</span>
           </div>
           <div class="record-body">
-            <p><strong>회사:</strong> ${record.visitor_company || record.company || 'N/A'} &nbsp; <strong>목적:</strong> ${record.visit_purpose || record.purpose || ''}</p>
-            <p><strong>안내자:</strong> ${record.guide_name || '미지정'} &nbsp; <strong>평가:</strong> ${
+            <p><strong>회사:</strong> ${escapeHtml(record.visitor_company || record.company || 'N/A')} &nbsp; <strong>목적:</strong> ${escapeHtml(record.visit_purpose || record.purpose || '')}</p>
+            <p><strong>안내자:</strong> ${escapeHtml(record.guide_name || '미지정')} &nbsp; <strong>평가:</strong> ${
               record.fitness_status === '적합' 
                 ? '<span style="display:inline-block; background:#047857; color:#fff; border:1.5px solid #047857; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.75rem; vertical-align:middle;">적합</span>' 
                 : record.fitness_status === '부적합' 
@@ -916,15 +935,26 @@ async function loadArchiveApprovals(filter = 'all') {
                   : '<span style="color:var(--text-muted);">미선택</span>'
             }</p>
           </div>
-          <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
+          <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap; align-items:center;">
             <!-- 상세보기 (수정 불가능한 보기 모드) -->
-            <button class="btn btn-ghost" style="flex:1; min-width:120px;"
+            <button class="btn btn-ghost" style="flex:1; min-width:100px;"
               onclick="showApprovalDetail('${record.id}', 'view')">
-              🔍 상세 보기
+              🔍 상세
             </button>
+            <!-- 퇴실 기록 버튼 -->
+            ${record.exit_time
+              ? `<button class="btn btn-ghost" style="padding:0.45rem 0.75rem; font-size:0.8rem; border:1px solid rgba(255,255,255,0.15);"
+                  onclick="quickExitRecord('${record.id}')" title="퇴실 시간 수정">
+                  🚪 퇴실수정
+                </button>`
+              : `<button class="btn btn-secondary" style="padding:0.45rem 0.75rem; font-size:0.8rem;"
+                  onclick="quickExitRecord('${record.id}')" title="현재 시각으로 퇴실 기록">
+                  🚪 퇴실
+                </button>`
+            }
             <!-- 상태 수정 (권한이 있는 사람만) -->
             ${canApprove
-              ? `<button class="btn btn-secondary" style="flex:1; min-width:120px;"
+              ? `<button class="btn btn-secondary" style="flex:1; min-width:110px;"
                   onclick="showApprovalDetail('${record.id}', 'edit')">
                   ✏️ 상태 변경
                 </button>
@@ -932,7 +962,7 @@ async function loadArchiveApprovals(filter = 'all') {
                   onclick="softDeleteRecord('${record.id}')">
                   🗑️
                 </button>`
-              : `<button class="btn btn-ghost" style="flex:1; min-width:120px; opacity:0.45; cursor:not-allowed;"
+              : `<button class="btn btn-ghost" style="flex:1; min-width:110px; opacity:0.45; cursor:not-allowed;"
                   title="상태 변경은 승인자만 가능합니다" disabled>
                   🔒 변경 (권한없음)
                 </button>`
@@ -1053,8 +1083,24 @@ async function showApprovalDetail(id, mode = 'view') {
         <div style="${sectionStyle}">
           <h4 style="${h4Style}">📋 방문자 정보</h4>
           <p><strong>이름:</strong> ${escapeHtml(data.visitor_name || data.name || '이름 없음')} (${escapeHtml(data.visitor_company || data.company || '소속 없음')})</p>
-          <p><strong>방문 일시:</strong> ${data.visit_date} ${data.visit_time || ''}</p>
+          <p><strong>입실 일시:</strong> ${data.visit_date} ${data.visit_time ? data.visit_time.slice(0,5) : ''}</p>
+          <p><strong>퇴실 일시:</strong> ${
+            data.exit_time 
+              ? `<span style="color:var(--text-main); font-weight:600;">${data.exit_date || data.visit_date} ${data.exit_time.slice(0,5)}</span> <span style="color:var(--text-muted); font-size:0.85rem;">(확인자: ${escapeHtml(data.exit_checked_by || '미기록')})</span>` 
+              : '<span style="color:#2563EB; font-weight:600;">🏢 체류 중 (미퇴실)</span>'
+          }</p>
           <p><strong>방문 목적:</strong> ${escapeHtml(data.visit_purpose || data.purpose || '')}${data.visit_purpose_other ? ' - ' + escapeHtml(data.visit_purpose_other) : ''}</p>
+          
+          <!-- 퇴실 시간 직접 입력 및 수정 영역 -->
+          <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px dashed var(--border); display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <label style="font-size:0.85rem; font-weight:600;">🚪 나간 시각(퇴실):</label>
+            <input type="time" id="detail-exit-time" class="form-input" style="width:130px; padding:0.25rem 0.5rem; font-size:0.85rem;" value="${data.exit_time ? data.exit_time.slice(0,5) : ''}">
+            <button class="btn btn-secondary btn-sm" onclick="saveDetailExitTime('${data.id}')">퇴실 시간 저장</button>
+            ${data.exit_time 
+              ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="cancelExitTime('${data.id}')">퇴실 기록 취소</button>` 
+              : `<button class="btn btn-ghost btn-sm" onclick="quickExitRecord('${data.id}', true)">현재 시각으로 퇴실</button>`
+            }
+          </div>
         </div>
 
         <!-- 건강 상태 점검 -->
@@ -1261,6 +1307,100 @@ async function submitApproval(decision) {
   } catch (err) {
     console.error('결재 처리 오류:', err);
     showToast('결재 처리 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+// =====================================================================
+// 방문자 퇴실(나간 시각) 관리 함수들
+// =====================================================================
+
+// 1. 빠른 퇴실 기록 (현재 시각으로 즉시 퇴실)
+async function quickExitRecord(id, keepModalOpen = false) {
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+  
+  showCustomConfirm('퇴실 기록', `현재 시각(${currentTime})으로 퇴실(나간 시각)을 기록하시겠습니까?`, async () => {
+    await recordExitTime(id, currentTime, keepModalOpen);
+  });
+}
+
+// 2. 상세 모달에서 직접 입력한 퇴실 시간 저장
+async function saveDetailExitTime(id) {
+  const timeInput = document.getElementById('detail-exit-time');
+  if (!timeInput || !timeInput.value) {
+    showToast('나간 시각(퇴실 시간)을 입력해 주세요.', 'error');
+    return;
+  }
+  await recordExitTime(id, timeInput.value, true);
+}
+
+// 3. 퇴실 기록 취소 (체류 중으로 복귀)
+async function cancelExitTime(id) {
+  showCustomConfirm('퇴실 기록 취소', '퇴실 기록을 취소하고 다시 "체류 중" 상태로 되돌리시겠습니까?', async () => {
+    try {
+      const { error } = await db.from('visitors').update({
+        exit_time: null,
+        exit_date: null,
+        exit_checked_by: null
+      }).eq('id', id);
+
+      if (error) throw error;
+
+      await logAction(id, 'UPDATED', '퇴실 기록 취소됨 (체류 중으로 변경)');
+      showToast('퇴실 기록이 취소되었습니다.', 'success');
+
+      // 상세 모달이 열려있으면 다시 로드
+      if (document.getElementById('approval-modal').style.display !== 'none') {
+        showApprovalDetail(id, 'view');
+      }
+
+      // 화면 새로고침
+      const activeTabPanel = document.querySelector('.tab-panel.active');
+      if (activeTabPanel && activeTabPanel.id === 'tab-archive') {
+        loadArchiveApprovals();
+      } else {
+        loadPendingApprovals();
+      }
+    } catch (err) {
+      console.error('퇴실 취소 오류:', err);
+      showToast('퇴실 취소 처리 중 오류가 발생했습니다.', 'error');
+    }
+  });
+}
+
+// 4. 퇴실 시간 데이터베이스 실제 업데이트 및 로깅
+async function recordExitTime(id, exitTime, keepModalOpen = false) {
+  try {
+    const now = new Date();
+    const exitDate = now.toISOString().slice(0, 10);
+    const actor = currentUser ? `${currentUser.name} (${currentUser.role})` : '안내자/관리자';
+
+    const { error } = await db.from('visitors').update({
+      exit_time: exitTime,
+      exit_date: exitDate,
+      exit_checked_by: actor
+    }).eq('id', id);
+
+    if (error) throw error;
+
+    await logAction(id, 'EXITED', `퇴실(나간 시각: ${exitTime}) 처리됨 (확인자: ${actor})`);
+    showToast(`🚪 퇴실 시각(${exitTime})이 기록되었습니다.`, 'success');
+
+    // 상세 모달이 열려있으면 다시 로드
+    if (keepModalOpen && document.getElementById('approval-modal').style.display !== 'none') {
+      showApprovalDetail(id, 'view');
+    }
+
+    // 현재 열려있는 탭에 따라 목록 리프레시
+    const activeTabPanel = document.querySelector('.tab-panel.active');
+    if (activeTabPanel && activeTabPanel.id === 'tab-archive') {
+      loadArchiveApprovals();
+    } else {
+      loadPendingApprovals();
+    }
+  } catch (err) {
+    console.error('퇴실 기록 오류:', err);
+    showToast('퇴실 기록 중 오류가 발생했습니다.', 'error');
   }
 }
 
@@ -1867,11 +2007,14 @@ function renderLedgerTable() {
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid #ddd';
     
-    const visitDateTime = `${record.visit_date} ${record.visit_time || ''}`.trim();
-    const company = record.visitor_company || record.company || '';
-    const name = record.visitor_name || record.name || '';
-    const purpose = record.visit_purpose || record.purpose || '';
-    const guideName = record.guide_name || '';
+    // 방문일시 (입실 ~ 퇴실)
+    const entryTime = record.visit_time ? record.visit_time.slice(0, 5) : '';
+    const exitTime = record.exit_time ? record.exit_time.slice(0, 5) : '<span style="color:#2563EB; font-size:0.75rem;">(체류중)</span>';
+    const visitDateTime = `${record.visit_date} ${entryTime} ~ ${exitTime}`.trim();
+    const company = escapeHtml(record.visitor_company || record.company || '');
+    const name = escapeHtml(record.visitor_name || record.name || '');
+    const purpose = escapeHtml(record.visit_purpose || record.purpose || '');
+    const guideName = escapeHtml(record.guide_name || '');
     
     // 적합/부적합 표시 (인쇄 시 심플한 텍스트로 표시)
     const fitnessText = record.fitness_status === '적합' 
@@ -1887,7 +2030,7 @@ function renderLedgerTable() {
 
     tr.innerHTML = `
       <td style="border:1px solid #000; padding:6px 4px;">${index + 1}</td>
-      <td style="border:1px solid #000; padding:6px 4px;">${visitDateTime}</td>
+      <td style="border:1px solid #000; padding:6px 4px; white-space:nowrap;">${visitDateTime}</td>
       <td style="border:1px solid #000; padding:6px 4px;">${company}</td>
       <td style="border:1px solid #000; padding:6px 4px;">${name}</td>
       <td style="border:1px solid #000; padding:6px 4px;">${purpose}</td>
@@ -1908,10 +2051,11 @@ function exportToCSV() {
 
   // BOM (Byte Order Mark) for UTF-8 Excel compatibility
   const BOM = '\uFEFF';
-  let csvContent = BOM + "No,방문일시,소속,성명,방문 목적,안내자,적합 여부,최종 결재\n";
+  let csvContent = BOM + "No,입실일시,퇴실일시,소속,성명,방문 목적,안내자,적합 여부,최종 결재\n";
 
   currentLedgerData.forEach((record, index) => {
-    const visitDateTime = `${record.visit_date} ${record.visit_time || ''}`.trim();
+    const entryDateTime = `${record.visit_date} ${record.visit_time ? record.visit_time.slice(0,5) : ''}`.trim();
+    const exitDateTime = record.exit_time ? `${record.exit_date || record.visit_date} ${record.exit_time.slice(0,5)}` : '체류중';
     // CSV 파싱 오류를 막기 위해 쉼표 제거 및 쌍따옴표 처리
     const escapeCsv = (str) => '"' + String(str).replace(/"/g, '""') + '"';
     
@@ -1924,7 +2068,8 @@ function exportToCSV() {
 
     const row = [
       index + 1,
-      visitDateTime,
+      escapeCsv(entryDateTime),
+      escapeCsv(exitDateTime),
       company,
       name,
       purpose,
@@ -2190,6 +2335,7 @@ async function renderTimeline(visitorId, containerEl) {
       if (log.action === 'CREATED') { icon = '📝'; actionText = '문서 작성'; }
       else if (log.action === 'APPROVED') { icon = '✅'; actionText = '결재 승인'; color = 'var(--success)'; }
       else if (log.action === 'REJECTED') { icon = '❌'; actionText = '결재 반려'; color = 'var(--danger)'; }
+      else if (log.action === 'EXITED') { icon = '🚪'; actionText = '퇴실(나감)'; color = '#4B5563'; }
       else if (log.action === 'DELETED') { icon = '🗑️'; actionText = '삭제됨(휴지통)'; color = '#4B5563'; }
       else if (log.action === 'RESTORED') { icon = '♻️'; actionText = '복구됨'; color = '#3B82F6'; }
       else if (log.action === 'UPDATED') { icon = '✏️'; actionText = '내용 수정'; }
@@ -2276,6 +2422,7 @@ async function loadAuditLog() {
         if (log.action === 'CREATED') actionBadge = `<span class="tag" style="background:#4B5563; ${badgeBaseStyle}">등록</span>`;
         else if (log.action === 'APPROVED') actionBadge = `<span class="tag" style="background:#047857; ${badgeBaseStyle}">승인</span>`;
         else if (log.action === 'REJECTED') actionBadge = `<span class="tag" style="background:#B91C1C; ${badgeBaseStyle}">반려</span>`;
+        else if (log.action === 'EXITED') actionBadge = `<span class="tag" style="background:#4B5563; ${badgeBaseStyle}">🚪 퇴실</span>`;
         else if (log.action === 'DELETED') actionBadge = `<span class="tag" style="background:#E14B4B; ${badgeBaseStyle}">삭제됨</span>`;
         else if (log.action === 'HARD_DELETED') actionBadge = `<span class="tag" style="background:#7F1D1D; border:1.5px solid #FF2D2D !important; ${badgeBaseStyle}">🗑️ 영구삭제</span>`;
         else if (log.action === 'RESTORED') actionBadge = `<span class="tag" style="background:#14A870; ${badgeBaseStyle}">복구됨</span>`;
