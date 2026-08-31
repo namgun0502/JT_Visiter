@@ -2754,41 +2754,32 @@ async function sendApprovalNotification(record) {
   }
 
   try {
-    // 1. 승인 권한(승인자, 안내자+승인자, admin, superadmin)을 가진 직원 중 이메일이 등록된 대상 조회
-    const { data: approvers, error } = await db
-      .from('employees')
-      .select('name, email, role')
-      .not('email', 'is', null);
-
-    if (error) {
-      console.warn('승인자 이메일 목록 조회 경고:', error);
-      return;
-    }
-
-    if (!approvers || approvers.length === 0) {
-      console.log('ℹ️ 등록된 이메일이 있는 직원이 없어 알림 메일 발송을 건너뜁니다.');
-      return;
-    }
-
-    // 2. 방문자 정보 정리
+    const approverName   = record.approver_name;
     const visitorName    = record.visitor_name    || record.name    || '방문자';
     const visitorCompany = record.visitor_company || record.company || '미지정';
     const guideName      = record.guide_name      || '미지정';
     const visitDate      = record.visit_date      || '';
+    const appUrl         = window.location.origin + window.location.pathname;
 
-    // 3. 발송 대상: 승인자/admin/superadmin 역할의 직원만 추출
-    const targetApprovers = approvers.filter(emp =>
-      emp.role === '승인자' || emp.role === '안내자+승인자' || emp.role === 'admin' || emp.role === 'superadmin'
-    );
+    // 1. 지정된 결재 승인자가 있는 경우: 해당 승인자 1명만 조회하여 발송 (1건 소모)
+    if (approverName) {
+      const { data: targetEmp, error } = await db
+        .from('employees')
+        .select('name, email')
+        .eq('name', approverName)
+        .not('email', 'is', null);
 
-    if (targetApprovers.length === 0) {
-      console.log('ℹ️ 승인자 역할의 직원이 없어 알림 메일 발송을 건너뜁니다.');
-      return;
-    }
+      if (error) {
+        console.warn('지정 승인자 이메일 조회 오류:', error);
+        return;
+      }
 
-    // 4. 각 승인자에게 이메일 발송 (EmailJS 호출)
-    const appUrl = window.location.origin + window.location.pathname;
-    const sendPromises = targetApprovers.map(approver => {
+      if (!targetEmp || targetEmp.length === 0 || !targetEmp[0].email) {
+        console.log(`ℹ️ 지정된 결재 승인자(${approverName})의 등록된 이메일이 없어 알림 발송을 건너뜁니다.`);
+        return;
+      }
+
+      const approver = targetEmp[0];
       const templateParams = {
         to_email:        approver.email,       // 수신자 이메일
         to_name:         approver.name,        // 수신자 이름
@@ -2798,20 +2789,15 @@ async function sendApprovalNotification(record) {
         visit_date:      visitDate,            // 방문 날짜
         app_url:         appUrl,               // 시스템 접속 링크
       };
-      return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
-    });
 
-    const results = await Promise.allSettled(sendPromises);
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+      console.log(`✅ [결재 요청 알림] 지정 승인자 ${approver.name}(${approver.email})에게 1건 발송 완료`);
+      showToast(`📧 결재 승인자(${approver.name})에게 알림 이메일을 발송했습니다.`, 'info');
+      return;
+    }
 
-    results.forEach((result, idx) => {
-      if (result.status === 'fulfilled') {
-        console.log(`✅ [결재 알림] ${targetApprovers[idx].name}(${targetApprovers[idx].email}) 발송 성공`);
-      } else {
-        console.error(`❌ [결재 알림] ${targetApprovers[idx].name}(${targetApprovers[idx].email}) 발송 실패:`, result.reason);
-      }
-    });
-
-    showToast('📧 결재 승인자에게 알림 이메일을 발송했습니다.', 'info');
+    // 2. 지정된 승인자가 없을 때: 승인 권한자 중 첫 1명 또는 알림 건너뛰기
+    console.log('ℹ️ 지정된 결재 승인자가 없어 알림 메일을 발송하지 않습니다.');
 
   } catch (err) {
     console.error('결재 알림 처리 오류:', err);
