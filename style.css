@@ -1680,6 +1680,16 @@ body {
   color: #a78bfa;
   border: 1px solid rgba(139,92,246,0.3);
 }
+.role-admin {
+  background: rgba(245,158,11,0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245,158,11,0.3);
+}
+.role-superadmin {
+  background: rgba(239,68,68,0.15);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.3);
+}
 
 /* =========================================================
    비밀번호 표시 토글 (눈알 버튼)

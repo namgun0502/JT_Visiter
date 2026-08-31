@@ -1757,14 +1757,21 @@ async function loadAdminEmployees() {
     if (!data || data.length === 0) {
       if (empty) empty.style.display = 'flex';
     } else {
+      // 0. 현재 로그인한 사용자의 권한에 맞게 역할 선택 옵션 필터링
+      updateRoleSelectOptions();
+
       // 1. 직원 목록 카드 렌더링
       data.forEach(emp => {
         const role = emp.role || '안내자';
         const badgeClass = role === '안내자' ? 'role-guide'
                          : role === '승인자' ? 'role-approver'
+                         : role === 'admin' ? 'role-admin'
+                         : role === 'superadmin' ? 'role-superadmin'
                          : 'role-both';
         const badgeIcon  = role === '안내자' ? '🔵'
                          : role === '승인자' ? '🟢'
+                         : role === 'admin' ? '🛡️'
+                         : role === 'superadmin' ? '👑'
                          : '🟣';
 
         const card = document.createElement('div');
@@ -1837,6 +1844,13 @@ async function handleAddEmployee(event) {
   const email = document.getElementById('e-email')?.value.trim() || null;
 
   if (!name) { showToast('이름을 입력해 주세요.', 'error'); return; }
+
+  // 권한 계층 검증: admin은 superadmin 역할을 부여할 수 없음
+  const isSuper = currentUser && currentUser.role === 'superadmin';
+  if (role === 'superadmin' && !isSuper) {
+    showToast('최고관리자(Superadmin) 권한은 최고관리자만 부여할 수 있습니다.', 'error');
+    return;
+  }
 
   const btn = document.getElementById('add-employee-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span>저장 중...</span>'; }
@@ -1960,11 +1974,29 @@ function toggleDeptInput() {
   }
 }
 
+// ── 관리자 권한별 역할 선택 옵션 필터링 ──
+function updateRoleSelectOptions() {
+  const isSuper = currentUser && currentUser.role === 'superadmin';
+  const roleSelects = [document.getElementById('e-role'), document.getElementById('edit-e-role')];
+
+  roleSelects.forEach(sel => {
+    if (!sel) return;
+    const superOption = sel.querySelector('option[value="superadmin"]');
+    if (superOption) {
+      // superadmin만 superadmin 역할을 부여할 수 있음 (admin은 숨김)
+      superOption.style.display = isSuper ? 'block' : 'none';
+      superOption.disabled = !isSuper;
+    }
+  });
+}
+
 // ── 관리자 탭: 직원 정보 수정 모달 열기 ──
 function openEditModal(id, name, dept, title, role, email = '') {
   const modal = document.getElementById('edit-employee-modal');
   if (!modal) return;
   
+  updateRoleSelectOptions();
+
   document.getElementById('edit-e-id').value = id;
   document.getElementById('edit-e-name').value = name;
   document.getElementById('edit-e-dept').value = dept;
@@ -1994,6 +2026,13 @@ async function submitEditEmployee(event) {
   const email = document.getElementById('edit-e-email')?.value.trim() || null;
   
   if (!id || !name) return;
+
+  // 권한 계층 검증: admin은 superadmin 역할을 부여할 수 없음
+  const isSuper = currentUser && currentUser.role === 'superadmin';
+  if (role === 'superadmin' && !isSuper) {
+    showToast('최고관리자(Superadmin) 권한은 최고관리자만 부여할 수 있습니다.', 'error');
+    return;
+  }
   
   const btn = document.getElementById('submit-edit-btn');
   if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
