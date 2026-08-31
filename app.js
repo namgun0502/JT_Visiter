@@ -2261,6 +2261,21 @@ function exportToCSV() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// 관리대장 인쇄 헬퍼 함수 (상단 중앙 브라우저 타이틀 중복 제거)
+function printLedger() {
+  const originalTitle = document.title;
+  // 인쇄 시 브라우저가 상단 중앙에 제목을 찍지 않도록 일시적으로 공백 처리
+  document.title = ' ';
+  
+  window.print();
+
+  // 인쇄 창 닫힌 후 원래 타이틀로 즉시 복구
+  setTimeout(() => {
+    document.title = originalTitle;
+  }, 1000);
 }
 
 // --- 타임라인 이력 로깅 함수 ---

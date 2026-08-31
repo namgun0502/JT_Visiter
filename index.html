@@ -27,7 +27,7 @@
       /* 세로(Portrait) 방향 강제 */
       @page {
         size: A4 portrait;
-        margin: 10mm;
+        margin: 8mm 10mm 10mm 10mm;
       }
       
       /* 숨길 요소들 */
@@ -37,34 +37,44 @@
 
       /* 메인 콘텐츠 영역 여백 제거 및 전체 화면 사용 */
       .app-wrapper {
-        display: block;
-        margin: 0;
-        padding: 0;
-        box-shadow: none;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
       }
       .main-content-wrapper {
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        background: transparent;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
       }
 
-      /* 출력될 영역 설정 */
+      /* 출력될 영역 설정 (A4 높이에 맞춰 전체 높이 사용) */
       #printable-ledger {
         display: block !important;
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        box-shadow: none;
-        border: none;
-        background: white;
-        overflow: visible !important; /* 인쇄 시 잘림 방지 */
+        position: relative !important;
+        width: 100% !important;
+        min-height: 270mm !important; /* A4 세로 인쇄 전체 높이 확보 */
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: white !important;
+        overflow: visible !important;
+      }
+
+      /* 상단 우측 JT_Visiter */
+      .print-top-header {
+        display: flex !important;
+        justify-content: flex-end !important;
+        font-size: 11px !important;
+        font-weight: 500 !important;
+        color: #000 !important;
+        margin-bottom: 0.25rem !important;
       }
       
       /* 세로 A4에 맞게 테이블 축소 조정 */
+      .ledger-header { margin-bottom: 1.5rem !important; }
       .ledger-header h1 { font-size: 20px !important; }
       .approval-block { font-size: 11px !important; }
       .approval-block td { padding: 2px !important; }
@@ -72,13 +82,13 @@
       .ledger-table {
         min-width: auto !important;
         width: 100% !important;
-        font-size: 11px !important; /* 글씨 작게 */
-        word-break: keep-all; /* 단어 단위로 줄바꿈 */
+        font-size: 11px !important;
+        word-break: keep-all !important;
       }
       
       .ledger-table th, .ledger-table td {
-        padding: 4px 2px !important; /* 여백 대폭 축소 */
-        overflow-wrap: break-word;
+        padding: 4px 2px !important;
+        overflow-wrap: break-word !important;
       }
 
       /* 모든 탭 패널 중 출력할 패널만 보이게 함 */
@@ -95,11 +105,18 @@
         border: 1px solid #000 !important;
       }
 
+      /* 하단 바닥글: A4 용지 맨 아래 우측 끝에 고정 */
       .ledger-footer {
         display: flex !important;
         justify-content: flex-end !important;
-        margin-top: 1rem !important;
+        align-items: center !important;
+        gap: 2rem !important;
+        position: absolute !important;
+        bottom: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
         font-size: 11px !important;
+        color: #000 !important;
       }
     }
   </style>
@@ -707,7 +724,7 @@
               </div>
               <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                 <button class="btn btn-secondary" onclick="loadLedger()">조회</button>
-                <button class="btn btn-primary" onclick="window.print()">📄 PDF 인쇄</button>
+                <button class="btn btn-primary" onclick="printLedger()">📄 PDF 인쇄</button>
                 <button class="btn btn-ghost" onclick="exportToCSV()" style="border: 1px solid var(--border-color);">📥 CSV 다운로드</button>
               </div>
             </div>
@@ -715,6 +732,11 @@
 
           <!-- 실제 인쇄될 영역 -->
           <div id="printable-ledger" class="printable-area card" style="margin-top:1rem; padding: 2rem; overflow-x: auto; background: #fff;">
+            <!-- 인쇄 시 최상단 우측에 표시되는 JT_Visiter -->
+            <div class="print-top-header" style="display:flex; justify-content:flex-end; font-size:12px; color:#000; font-weight:500; margin-bottom:0.25rem;">
+              JT_Visiter
+            </div>
+
             <div class="ledger-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem;">
               <div style="display: flex; align-items: center; gap: 1.25rem; padding-bottom: 4px;">
                 <img src="./brand/logo/logo-h.svg" alt="Janytree" style="height: 44px; width: auto;">
