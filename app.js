@@ -1703,38 +1703,6 @@ async function getAdminPasswordHash() {
   }
 }
 
-
-// 관리자 비밀번호 변경 (SHA-256 해시 후 Supabase에 저장)
-async function changeAdminPassword() {
-  const newPw  = document.getElementById('new-password')?.value;
-  const newPw2 = document.getElementById('new-password-confirm')?.value;
-
-  if (!newPw || newPw.length < 4) {
-    showToast('비밀번호는 4자 이상이어야 합니다.', 'error'); return;
-  }
-  if (newPw !== newPw2) {
-    showToast('비밀번호가 일치하지 않습니다.', 'error'); return;
-  }
-
-  try {
-    const newHash = await hashPassword(newPw);
-
-    // Supabase settings 테이블에 upsert (있으면 수정, 없으면 삽입)
-    const { error } = await db
-      .from('settings')
-      .upsert({ key: 'admin_password_hash', value: newHash, updated_at: new Date().toISOString() });
-
-    if (error) throw error;
-
-    showToast('✅ 비밀번호가 변경되어 서버에 안전하게 저장되었습니다!', 'success');
-    document.getElementById('new-password').value = '';
-    document.getElementById('new-password-confirm').value = '';
-  } catch (err) {
-    console.error('비밀번호 변경 오류:', err);
-    showToast('비밀번호 변경 중 오류가 발생했습니다.', 'error');
-  }
-}
-
 // ── 관리자 탭: 직원 목록 불러오기 ──
 async function loadAdminEmployees() {
   const loading = document.getElementById('admin-emp-loading');
