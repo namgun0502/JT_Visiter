@@ -35,9 +35,10 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // EmailJS 설정 (이메일 알림 발송용)
 // =====================================================================
 // EmailJS 대시보드 > Account > General에서 Public Key를 확인하세요.
-const EMAILJS_SERVICE_ID  = 'service_0cyzivm';   // EmailJS 서비스 ID
-const EMAILJS_TEMPLATE_ID = 'template_m21ewqk';  // EmailJS 템플릿 ID
-const EMAILJS_PUBLIC_KEY  = 'M64VkGri7Omu6w38j';    // EmailJS Public Key
+const EMAILJS_SERVICE_ID         = 'service_0cyzivm';   // EmailJS 서비스 ID
+const EMAILJS_TEMPLATE_ID        = 'template_m21ewqk';  // 결재 요청용 템플릿 ID (승인자에게)
+const EMAILJS_RESULT_TEMPLATE_ID = 'template_4tsp06k';  // 결재 결과용 템플릿 ID (등록자/안내자에게)
+const EMAILJS_PUBLIC_KEY         = 'M64VkGri7Omu6w38j';    // EmailJS Public Key
 
 // EmailJS SDK 초기화 (앱 시작 시 1회 실행)
 emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
@@ -1383,19 +1384,25 @@ async function submitApproval(decision) {
   if (!confirm(confirmMsg)) return;
 
   try {
-    const { error } = await db
+    const { data: updatedRecords, error } = await db
       .from('visitors')
       .update({
         approval_status: decision,
         approved_at: new Date().toISOString()
       })
-      .eq('id', currentApprovalRecordId);
+      .eq('id', currentApprovalRecordId)
+      .select();
 
     if (error) throw error;
     
     // 이력 로깅
     const actionEnum = decision === '승인' ? 'APPROVED' : 'REJECTED';
     await logAction(currentApprovalRecordId, actionEnum, decision + ' 처리됨');
+
+    // 결재 결과(승인/반려)를 등록자(안내자)에게 이메일 통보
+    if (updatedRecords && updatedRecords.length > 0) {
+      sendApprovalResultNotification(updatedRecords[0], decision);
+    }
 
     showToast(`방문자가 성공적으로 ${decision} 처리되었습니다.`, 'success');
     closeApprovalModal();
@@ -2806,6 +2813,64 @@ async function sendApprovalNotification(record) {
 
   } catch (err) {
     console.error('결재 알림 처리 오류:', err);
+  }
+}
+
+// =====================================================================
+// 결재 결과(승인/반려) 안내자(등록자) 통보 알림 전송 모듈
+// =====================================================================
+async function sendApprovalResultNotification(record, decision) {
+  if (!record) return;
+
+  // 결재 결과 템플릿 ID 미설정 시 처리
+  if (!EMAILJS_RESULT_TEMPLATE_ID || EMAILJS_RESULT_TEMPLATE_ID === 'YOUR_RESULT_TEMPLATE_ID') {
+    console.warn('⚠️ 결재 결과용 EmailJS Template ID가 설정되지 않아 알림 발송을 건너뜁니다.');
+    return;
+  }
+
+  try {
+    const guideName = record.guide_name;
+    if (!guideName) {
+      console.log('ℹ️ 안내자 정보가 없어 결재 결과 알림을 발송하지 않습니다.');
+      return;
+    }
+
+    // 안내자의 이메일 조회
+    const { data: employees, error } = await db
+      .from('employees')
+      .select('name, email')
+      .eq('name', guideName)
+      .not('email', 'is', null);
+
+    if (error) {
+      console.warn('안내자 이메일 조회 오류:', error);
+      return;
+    }
+
+    if (!employees || employees.length === 0 || !employees[0].email) {
+      console.log(`ℹ️ 안내자(${guideName})의 등록된 이메일이 없어 결과 알림을 건너뜁니다.`);
+      return;
+    }
+
+    const guideEmail = employees[0].email;
+    const visitorName = record.visitor_name || record.name || '방문자';
+    const visitorCompany = record.visitor_company || record.company || '미지정';
+    const approverName = (currentUser && currentUser.name) ? currentUser.name : (record.approver_name || '결재자');
+
+    const templateParams = {
+      to_email:        guideEmail,                    // 수신자(안내자) 이메일
+      to_name:         guideName,                     // 수신자 이름
+      decision:        decision,                      // 결재 결과 ('승인' 또는 '반려')
+      visitor_name:    visitorName,                   // 방문자 이름
+      visitor_company: visitorCompany,                // 방문자 소속
+      approver_name:   approverName,                  // 결재 처리자
+      approved_at:     new Date().toLocaleString('ko-KR') // 결재 일시
+    };
+
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_RESULT_TEMPLATE_ID, templateParams);
+    console.log(`✅ [결재 결과 알림] ${guideName}(${guideEmail})에게 '${decision}' 결과 메일 발송 완료`);
+  } catch (err) {
+    console.error('결재 결과 알림 발송 오류:', err);
   }
 }
 
