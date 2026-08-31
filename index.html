@@ -679,21 +679,52 @@
                 <p>기록된 이력이 없습니다.</p>
               </div>
               
-              <div class="table-responsive" style="margin-top: 1rem;">
+              <div class="table-responsive" style="margin-top: 1rem; position: relative;">
                 <table class="data-table" id="audit-table">
                   <thead>
                     <tr>
                       <th style="width: 15%">시간</th>
-                      <th style="width: 12%">작업</th>
-                      <th style="width: 18%">대상 방문자</th>
-                      <th style="width: 15%">작업자</th>
-                      <th style="width: 40%">상세 내용</th>
+                      <th style="width: 13%; cursor: pointer;" class="audit-th-filter" onclick="toggleAuditHeaderDropdown(event, 'action')" title="클릭하여 작업별 필터">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                          <span>작업</span>
+                          <span class="audit-th-icon" id="th-icon-action" style="font-size:0.7rem; opacity:0.6;">▼</span>
+                        </div>
+                      </th>
+                      <th style="width: 20%; cursor: pointer;" class="audit-th-filter" onclick="toggleAuditHeaderDropdown(event, 'visitor')" title="클릭하여 방문자별 필터">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                          <span>대상 방문자</span>
+                          <span class="audit-th-icon" id="th-icon-visitor" style="font-size:0.7rem; opacity:0.6;">▼</span>
+                        </div>
+                      </th>
+                      <th style="width: 15%; cursor: pointer;" class="audit-th-filter" onclick="toggleAuditHeaderDropdown(event, 'actor')" title="클릭하여 작업자별 필터">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                          <span>작업자</span>
+                          <span class="audit-th-icon" id="th-icon-actor" style="font-size:0.7rem; opacity:0.6;">▼</span>
+                        </div>
+                      </th>
+                      <th style="width: 37%; cursor: pointer;" class="audit-th-filter" onclick="toggleAuditHeaderDropdown(event, 'remarks')" title="클릭하여 상세 내용 검색">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                          <span>상세 내용</span>
+                          <span class="audit-th-icon" id="th-icon-remarks" style="font-size:0.7rem; opacity:0.6;">🔍</span>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody id="audit-list">
                     <!-- JS에서 동적 추가 -->
                   </tbody>
                 </table>
+
+                <!-- 헤더 클릭 시 뜨는 플로팅 드롭다운 메뉴 -->
+                <div id="audit-header-dropdown" style="display:none; position:fixed; z-index:9999; background:var(--card-bg, #1e293b); border:1.5px solid var(--border-color, #334155); border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.5); min-width:200px; max-width:280px; padding:0.5rem; font-size:0.85rem; backdrop-filter:blur(10px);">
+                  <div id="audit-dropdown-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0.5rem; border-bottom:1px solid var(--border-color); margin-bottom:0.4rem; font-weight:700; color:var(--text-primary);">
+                    <span id="audit-dropdown-title">필터 선택</span>
+                    <button type="button" onclick="closeAuditHeaderDropdown()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:0.9rem;">✕</button>
+                  </div>
+                  <div id="audit-dropdown-content" style="max-height:240px; overflow-y:auto;">
+                    <!-- JS에서 항목 동적 생성 -->
+                  </div>
+                </div>
               </div>
             </div>
           </div>

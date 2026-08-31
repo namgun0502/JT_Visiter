@@ -2716,6 +2716,9 @@ function renderAuditFilterTags() {
     tagsList.appendChild(createFilterTagElement('상세', auditFilterState.remarks, () => removeAuditFilter('remarks')));
   }
 
+  // 헤더 아이콘 및 색상 상태 동기화
+  updateAuditHeaderVisuals();
+
   if (activeCount > 0) {
     container.style.display = 'flex';
     // 전체 해제 버튼
@@ -2729,6 +2732,222 @@ function renderAuditFilterTags() {
     container.style.display = 'none';
   }
 }
+
+// ── 헤더 필터 활성 상태 시각화 ──
+function updateAuditHeaderVisuals() {
+  const map = {
+    action: document.getElementById('th-icon-action'),
+    visitor: document.getElementById('th-icon-visitor'),
+    actor: document.getElementById('th-icon-actor'),
+    remarks: document.getElementById('th-icon-remarks'),
+  };
+
+  if (map.action) {
+    map.action.style.color = auditFilterState.action ? '#60a5fa' : 'inherit';
+    map.action.style.opacity = auditFilterState.action ? '1' : '0.6';
+    map.action.parentElement.parentElement.style.color = auditFilterState.action ? '#60a5fa' : 'inherit';
+  }
+  if (map.visitor) {
+    map.visitor.style.color = auditFilterState.visitorId ? '#60a5fa' : 'inherit';
+    map.visitor.style.opacity = auditFilterState.visitorId ? '1' : '0.6';
+    map.visitor.parentElement.parentElement.style.color = auditFilterState.visitorId ? '#60a5fa' : 'inherit';
+  }
+  if (map.actor) {
+    map.actor.style.color = auditFilterState.actor ? '#60a5fa' : 'inherit';
+    map.actor.style.opacity = auditFilterState.actor ? '1' : '0.6';
+    map.actor.parentElement.parentElement.style.color = auditFilterState.actor ? '#60a5fa' : 'inherit';
+  }
+  if (map.remarks) {
+    map.remarks.style.color = auditFilterState.remarks ? '#60a5fa' : 'inherit';
+    map.remarks.style.opacity = auditFilterState.remarks ? '1' : '0.6';
+    map.remarks.parentElement.parentElement.style.color = auditFilterState.remarks ? '#60a5fa' : 'inherit';
+  }
+}
+
+// ── 헤더 드롭다운 메뉴 열기/닫기 ──
+let currentOpenAuditDropdown = null;
+
+async function toggleAuditHeaderDropdown(event, columnType) {
+  event.stopPropagation();
+  const dropdown = document.getElementById('audit-header-dropdown');
+  const titleEl = document.getElementById('audit-dropdown-title');
+  const contentEl = document.getElementById('audit-dropdown-content');
+  if (!dropdown || !titleEl || !contentEl) return;
+
+  if (currentOpenAuditDropdown === columnType && dropdown.style.display === 'block') {
+    closeAuditHeaderDropdown();
+    return;
+  }
+
+  currentOpenAuditDropdown = columnType;
+  contentEl.innerHTML = '<div style="padding:0.75rem; text-align:center; color:var(--text-secondary);">불러오는 중...</div>';
+
+  // 팝오버 위치 계산
+  const th = event.currentTarget;
+  const rect = th.getBoundingClientRect();
+  dropdown.style.display = 'block';
+  dropdown.style.top = `${rect.bottom + 6}px`;
+  dropdown.style.left = `${Math.min(rect.left, window.innerWidth - 290)}px`;
+
+  // 1. 작업(Action) 드롭다운
+  if (columnType === 'action') {
+    titleEl.textContent = '작업 필터';
+    const actions = [
+      { key: null, label: '전체 (필터 해제)' },
+      { key: 'CREATED', label: '📝 등록', color: '#4B5563' },
+      { key: 'APPROVED', label: '✅ 승인', color: '#047857' },
+      { key: 'REJECTED', label: '❌ 반려', color: '#B91C1C' },
+      { key: 'EXITED', label: '🚪 퇴실', color: '#4B5563' },
+      { key: 'DELETED', label: '🗑️ 삭제됨', color: '#E14B4B' },
+      { key: 'HARD_DELETED', label: '💥 영구삭제', color: '#7F1D1D' },
+      { key: 'RESTORED', label: '♻️ 복구됨', color: '#14A870' },
+      { key: 'UPDATED', label: '✏️ 수정됨', color: '#6366F1' },
+    ];
+
+    contentEl.innerHTML = '';
+    actions.forEach(act => {
+      const item = document.createElement('div');
+      const isSelected = auditFilterState.action === act.key;
+      item.className = 'audit-dropdown-item';
+      item.style.cssText = `padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; font-size:0.82rem; ${isSelected ? 'background:rgba(59,130,246,0.2); font-weight:700; color:#93c5fd;' : 'color:var(--text-primary);'}`;
+      item.innerHTML = `
+        <span>${act.label}</span>
+        ${isSelected ? '<span style="color:#60a5fa;">✓</span>' : ''}
+      `;
+      item.onclick = () => {
+        if (act.key === null) {
+          removeAuditFilter('action');
+        } else {
+          setAuditFilter('action', act.key);
+        }
+        closeAuditHeaderDropdown();
+      };
+      contentEl.appendChild(item);
+    });
+  }
+
+  // 2. 대상 방문자(Visitor) 드롭다운
+  else if (columnType === 'visitor') {
+    titleEl.textContent = '방문자 필터';
+    try {
+      const { data: vList } = await db.from('visitors').select('id, visitor_name, visitor_company').order('visitor_name', { ascending: true });
+      contentEl.innerHTML = '';
+
+      // 전체 해제 항목
+      const allItem = document.createElement('div');
+      allItem.className = 'audit-dropdown-item';
+      allItem.style.cssText = 'padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; color:var(--text-secondary); margin-bottom:4px; font-size:0.82rem; border-bottom:1px solid var(--border-color);';
+      allItem.textContent = '전체 (필터 해제)';
+      allItem.onclick = () => { removeAuditFilter('visitorId'); closeAuditHeaderDropdown(); };
+      contentEl.appendChild(allItem);
+
+      if (vList && vList.length > 0) {
+        vList.forEach(v => {
+          const item = document.createElement('div');
+          const isSelected = auditFilterState.visitorId === v.id;
+          item.className = 'audit-dropdown-item';
+          item.style.cssText = `padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; font-size:0.82rem; ${isSelected ? 'background:rgba(59,130,246,0.2); font-weight:700; color:#93c5fd;' : 'color:var(--text-primary);'}`;
+          const name = v.visitor_name || '이름 없음';
+          const comp = v.visitor_company ? ` (${v.visitor_company})` : '';
+          item.innerHTML = `<span>👤 ${escapeHtml(name)}<small style="color:var(--text-muted);">${escapeHtml(comp)}</small></span>${isSelected ? '<span style="color:#60a5fa;">✓</span>' : ''}`;
+          item.onclick = () => {
+            setAuditFilter('visitorId', v.id, name);
+            closeAuditHeaderDropdown();
+          };
+          contentEl.appendChild(item);
+        });
+      } else {
+        contentEl.innerHTML += '<div style="padding:0.5rem; text-align:center; color:var(--text-muted);">목록 없음</div>';
+      }
+    } catch {
+      contentEl.innerHTML = '<div style="padding:0.5rem; color:var(--danger);">조회 실패</div>';
+    }
+  }
+
+  // 3. 작업자(Actor) 드롭다운
+  else if (columnType === 'actor') {
+    titleEl.textContent = '작업자 필터';
+    try {
+      const { data: actorsData } = await db.from('visitor_logs').select('actor_name').not('actor_name', 'is', null);
+      const uniqueActors = [...new Set((actorsData || []).map(a => a.actor_name).filter(Boolean))].sort();
+
+      contentEl.innerHTML = '';
+      const allItem = document.createElement('div');
+      allItem.className = 'audit-dropdown-item';
+      allItem.style.cssText = 'padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; color:var(--text-secondary); margin-bottom:4px; font-size:0.82rem; border-bottom:1px solid var(--border-color);';
+      allItem.textContent = '전체 (필터 해제)';
+      allItem.onclick = () => { removeAuditFilter('actor'); closeAuditHeaderDropdown(); };
+      contentEl.appendChild(allItem);
+
+      uniqueActors.forEach(actorName => {
+        const item = document.createElement('div');
+        const isSelected = auditFilterState.actor === actorName;
+        item.className = 'audit-dropdown-item';
+        item.style.cssText = `padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; font-size:0.82rem; ${isSelected ? 'background:rgba(59,130,246,0.2); font-weight:700; color:#93c5fd;' : 'color:var(--text-primary);'}`;
+        item.innerHTML = `<span>🧑 ${escapeHtml(actorName)}</span>${isSelected ? '<span style="color:#60a5fa;">✓</span>' : ''}`;
+        item.onclick = () => {
+          setAuditFilter('actor', actorName);
+          closeAuditHeaderDropdown();
+        };
+        contentEl.appendChild(item);
+      });
+    } catch {
+      contentEl.innerHTML = '<div style="padding:0.5rem; color:var(--danger);">조회 실패</div>';
+    }
+  }
+
+  // 4. 상세 내용(Remarks) 검색 드롭다운
+  else if (columnType === 'remarks') {
+    titleEl.textContent = '상세 내용 검색';
+    contentEl.innerHTML = `
+      <div style="padding:0.25rem;">
+        <input type="text" id="audit-remarks-search-input" class="form-input" placeholder="검색할 상세 내용 입력..." value="${escapeHtml(auditFilterState.remarks || '')}" style="width:100%; font-size:0.82rem; padding:0.4rem;" />
+        <div style="display:flex; gap:0.4rem; margin-top:0.5rem;">
+          <button type="button" class="btn btn-secondary btn-sm" style="flex:1; font-size:0.75rem;" onclick="removeAuditFilter('remarks'); closeAuditHeaderDropdown();">초기화</button>
+          <button type="button" class="btn btn-primary btn-sm" style="flex:1; font-size:0.75rem;" onclick="submitAuditRemarksFilter()">검색</button>
+        </div>
+      </div>
+    `;
+    setTimeout(() => {
+      const input = document.getElementById('audit-remarks-search-input');
+      if (input) {
+        input.focus();
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') submitAuditRemarksFilter();
+        });
+      }
+    }, 50);
+  }
+}
+
+// 상세 검색 제출
+function submitAuditRemarksFilter() {
+  const input = document.getElementById('audit-remarks-search-input');
+  const val = input ? input.value.trim() : '';
+  if (val) {
+    setAuditFilter('remarks', val);
+  } else {
+    removeAuditFilter('remarks');
+  }
+  closeAuditHeaderDropdown();
+}
+
+// 헤더 드롭다운 닫기
+function closeAuditHeaderDropdown() {
+  const dropdown = document.getElementById('audit-header-dropdown');
+  if (dropdown) dropdown.style.display = 'none';
+  currentOpenAuditDropdown = null;
+}
+
+// 화면 바깥 클릭 시 드롭다운 닫기 이벤트
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('audit-header-dropdown');
+  if (dropdown && dropdown.style.display === 'block') {
+    if (!dropdown.contains(e.target) && !e.target.closest('.audit-th-filter')) {
+      closeAuditHeaderDropdown();
+    }
+  }
+});
 
 // 필터 태그 DOM 요소 생성 헬퍼
 function createFilterTagElement(category, text, onRemove) {

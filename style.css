@@ -1799,6 +1799,20 @@ body {
   transform: scale(1.06);
 }
 
+/* 이력 관리 헤더 드롭다운 아이템 호버 */
+.audit-dropdown-item {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.audit-dropdown-item:hover {
+  background: rgba(59,130,246,0.15) !important;
+  color: #93c5fd !important;
+}
+
+.audit-th-filter:hover {
+  background: rgba(255,255,255,0.04);
+  color: #93c5fd;
+}
+
 /* 상세 내용 컬럼만 예외적으로 줄 바꿈 허용 */
 .data-table td:last-child {
   white-space: normal;
