@@ -49,28 +49,17 @@
         background: transparent !important;
       }
 
-      /* 출력될 영역 설정 (A4 높이에 맞춰 전체 높이 사용) */
+      /* 출력될 영역 설정 */
       #printable-ledger {
         display: block !important;
         position: relative !important;
         width: 100% !important;
-        min-height: 270mm !important; /* A4 세로 인쇄 전체 높이 확보 */
         margin: 0 !important;
         padding: 0 !important;
         box-shadow: none !important;
         border: none !important;
         background: white !important;
         overflow: visible !important;
-      }
-
-      /* 상단 우측 JT_Visiter */
-      .print-top-header {
-        display: flex !important;
-        justify-content: flex-end !important;
-        font-size: 11px !important;
-        font-weight: 500 !important;
-        color: #000 !important;
-        margin-bottom: 0.25rem !important;
       }
       
       /* 세로 A4에 맞게 테이블 축소 조정 */
@@ -103,20 +92,6 @@
       .ledger-table th, .ledger-table td,
       .approval-block td {
         border: 1px solid #000 !important;
-      }
-
-      /* 하단 바닥글: A4 용지 맨 아래 우측 끝에 고정 */
-      .ledger-footer {
-        display: flex !important;
-        justify-content: flex-end !important;
-        align-items: center !important;
-        gap: 2rem !important;
-        position: absolute !important;
-        bottom: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        font-size: 11px !important;
-        color: #000 !important;
       }
     }
   </style>
@@ -732,11 +707,6 @@
 
           <!-- 실제 인쇄될 영역 -->
           <div id="printable-ledger" class="printable-area card" style="margin-top:1rem; padding: 2rem; overflow-x: auto; background: #fff;">
-            <!-- 인쇄 시 최상단 우측에 표시되는 JT_Visiter -->
-            <div class="print-top-header" style="display:flex; justify-content:flex-end; font-size:12px; color:#000; font-weight:500; margin-bottom:0.25rem;">
-              JT_Visiter
-            </div>
-
             <div class="ledger-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem;">
               <div style="display: flex; align-items: center; gap: 1.25rem; padding-bottom: 4px;">
                 <img src="./brand/logo/logo-h.svg" alt="Janytree" style="height: 44px; width: auto;">
@@ -775,12 +745,6 @@
                 <!-- JS에서 채워짐 -->
               </tbody>
             </table>
-
-            <!-- 하단 푸터: (주)제니트리가 1/1 왼쪽에 위치 -->
-            <div class="ledger-footer" style="display:flex; justify-content:flex-end; align-items:center; gap:2.5rem; margin-top:1.5rem; font-size:0.85rem; color:#000;">
-              <span>(주)제니트리</span>
-              <span>1/1</span>
-            </div>
           </div>
         </section>
 
