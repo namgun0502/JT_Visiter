@@ -116,9 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 저장된 로그인 정보 불러오기 & 헤더 UI 갱신
   initAuth();
 
-  // 결재 대기 건수 뱃지 초기 조회 및 10초 주기 자동 갱신
-  updateApprovalBadgeCount();
-  setInterval(updateApprovalBadgeCount, 10000);
+  // 사이드바 뱃지 (결재 대기, 보관함, 휴지통) 초기 조회 및 10초 주기 자동 갱신
+  updateAllBadgeCounts();
+  setInterval(updateAllBadgeCounts, 10000);
 
   // 초기 탭 데이터를 불러옵니다
   if (document.getElementById('tab-approval').classList.contains('active')) {
@@ -127,26 +127,52 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =====================================================================
-// 결재 대기 건수 뱃지 실시간 업데이트 함수
+// 사이드바 뱃지 (결재 대기, 보관함, 휴지통) 실시간 업데이트 함수
 // =====================================================================
-async function updateApprovalBadgeCount() {
-  const badge = document.getElementById('approval-badge');
-  if (!badge) return;
+async function updateAllBadgeCounts() {
+  const approvalBadge = document.getElementById('approval-badge');
+  const archiveBadge = document.getElementById('archive-badge');
+  const trashBadge = document.getElementById('trash-badge');
 
   try {
-    const { count, error } = await db
+    // 1. 결재 대기 건수 (approval_status = '대기', deleted_at IS NULL)
+    const pApproval = db
       .from('visitors')
       .select('*', { count: 'exact', head: true })
       .eq('approval_status', '대기')
       .is('deleted_at', null);
 
-    if (error) throw error;
+    // 2. 보관함 건수 (approval_status IN ('승인', '반려'), deleted_at IS NULL)
+    const pArchive = db
+      .from('visitors')
+      .select('*', { count: 'exact', head: true })
+      .in('approval_status', ['승인', '반려'])
+      .is('deleted_at', null);
 
-    badge.textContent = (count !== null && count !== undefined) ? count.toString() : '0';
+    // 3. 휴지통 건수 (deleted_at IS NOT NULL)
+    const pTrash = db
+      .from('visitors')
+      .select('*', { count: 'exact', head: true })
+      .not('deleted_at', 'is', null);
+
+    const [resApproval, resArchive, resTrash] = await Promise.all([pApproval, pArchive, pTrash]);
+
+    if (approvalBadge && resApproval.count !== null && resApproval.count !== undefined) {
+      approvalBadge.textContent = resApproval.count.toString();
+    }
+    if (archiveBadge && resArchive.count !== null && resArchive.count !== undefined) {
+      archiveBadge.textContent = resArchive.count.toString();
+    }
+    if (trashBadge && resTrash.count !== null && resTrash.count !== undefined) {
+      trashBadge.textContent = resTrash.count.toString();
+    }
   } catch (err) {
-    console.error('결재 뱃지 카운트 조회 오류:', err);
+    console.error('사이드바 뱃지 카운트 조회 오류:', err);
   }
 }
+
+// 하위 호환성을 위한 alias
+const updateApprovalBadgeCount = updateAllBadgeCounts;
 
 // =====================================================================
 // 탭 전환 기능
