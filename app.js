@@ -1022,6 +1022,10 @@ async function showApprovalDetail(id, mode = 'view') {
 
     currentApprovalRecordId = id;
     
+    // 결재 권한 여부 확인 (승인자, 안내자+승인자, admin, superadmin)
+    const hasApproveRole = currentUser &&
+      (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin');
+
     // ── 응답값을 뱃지로 변환하는 헬퍼 함수 ──
     // isYesGood: true면 '예'가 좋은 답변, false면 '아니오'가 좋은 답변
     function badge(val, isYesGood = true) {
@@ -1091,10 +1095,20 @@ async function showApprovalDetail(id, mode = 'view') {
           }</p>
           <p><strong>방문 목적:</strong> ${escapeHtml(data.visit_purpose || data.purpose || '')}${data.visit_purpose_other ? ' - ' + escapeHtml(data.visit_purpose_other) : ''}</p>
           
+          ${hasApproveRole ? `
+          <!-- [승인자 전용] 입실 날짜 및 시간 수정 영역 -->
+          <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px dashed var(--border); display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <label style="font-size:0.85rem; font-weight:600; color:var(--text-main);">📅 입실 일시 수정:</label>
+            <input type="date" id="detail-visit-date" class="form-input" style="width:135px; padding:0.25rem 0.5rem; font-size:0.85rem;" value="${data.visit_date || ''}">
+            <input type="time" id="detail-visit-time" class="form-input" style="width:115px; padding:0.25rem 0.5rem; font-size:0.85rem;" value="${data.visit_time ? data.visit_time.slice(0,5) : ''}">
+            <button class="btn btn-secondary btn-sm" onclick="saveDetailVisitDateTime('${data.id}', '${data.visit_date}', '${data.visit_time ? data.visit_time.slice(0,5) : ''}')">입실 일시 저장</button>
+          </div>
+          ` : ''}
+
           <!-- 퇴실 시간 직접 입력 및 수정 영역 -->
           <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px dashed var(--border); display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-            <label style="font-size:0.85rem; font-weight:600;">🚪 나간 시각(퇴실):</label>
-            <input type="time" id="detail-exit-time" class="form-input" style="width:130px; padding:0.25rem 0.5rem; font-size:0.85rem;" value="${data.exit_time ? data.exit_time.slice(0,5) : ''}">
+            <label style="font-size:0.85rem; font-weight:600; color:var(--text-main);">🚪 나간 시각(퇴실):</label>
+            <input type="time" id="detail-exit-time" class="form-input" style="width:115px; padding:0.25rem 0.5rem; font-size:0.85rem;" value="${data.exit_time ? data.exit_time.slice(0,5) : ''}">
             <button class="btn btn-secondary btn-sm" onclick="saveDetailExitTime('${data.id}')">퇴실 시간 저장</button>
             ${data.exit_time 
               ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="cancelExitTime('${data.id}')">퇴실 기록 취소</button>` 
@@ -1307,6 +1321,64 @@ async function submitApproval(decision) {
   } catch (err) {
     console.error('결재 처리 오류:', err);
     showToast('결재 처리 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+// =====================================================================
+// [승인자 전용] 방문 일자 및 시간 수정 함수
+// =====================================================================
+async function saveDetailVisitDateTime(id, oldDate, oldTime) {
+  const hasApproveRole = currentUser &&
+    (currentUser.role === '승인자' || currentUser.role === '안내자+승인자' || currentUser.role === 'admin' || currentUser.role === 'superadmin');
+  
+  if (!hasApproveRole) {
+    showToast('수정 권한이 없습니다. (승인자 이상 권한 필요)', 'error');
+    return;
+  }
+
+  const dateInput = document.getElementById('detail-visit-date');
+  const timeInput = document.getElementById('detail-visit-time');
+
+  if (!dateInput || !dateInput.value) {
+    showToast('입실 날짜를 입력해 주세요.', 'error');
+    return;
+  }
+  if (!timeInput || !timeInput.value) {
+    showToast('입실 시간을 입력해 주세요.', 'error');
+    return;
+  }
+
+  const newDate = dateInput.value;
+  const newTime = timeInput.value;
+
+  try {
+    const { error } = await db.from('visitors').update({
+      visit_date: newDate,
+      visit_time: newTime
+    }).eq('id', id);
+
+    if (error) throw error;
+
+    const actor = currentUser ? `${currentUser.name} (${currentUser.role})` : '승인자';
+    await logAction(id, 'UPDATED', `방문 일시 수정됨: [${oldDate} ${oldTime}] ➔ [${newDate} ${newTime}] (수정자: ${actor})`);
+    
+    showToast('📅 방문 일시가 성공적으로 수정되었습니다.', 'success');
+
+    // 모달 새로고침
+    if (document.getElementById('approval-modal').style.display !== 'none') {
+      showApprovalDetail(id, 'view');
+    }
+
+    // 백그라운드 탭 새로고침
+    const activeTabPanel = document.querySelector('.tab-panel.active');
+    if (activeTabPanel && activeTabPanel.id === 'tab-archive') {
+      loadArchiveApprovals();
+    } else {
+      loadPendingApprovals();
+    }
+  } catch (err) {
+    console.error('방문 일시 수정 오류:', err);
+    showToast('방문 일시 수정 중 오류가 발생했습니다: ' + err.message, 'error');
   }
 }
 
