@@ -1528,23 +1528,42 @@ body {
     justify-content: space-around;
   }
   .nav-btn {
+    position: relative;
     flex-direction: column;
     gap: 0.2rem;
-    padding: 0.5rem;
+    padding: 0.4rem 0.25rem;
     flex: 1;
     text-align: center;
     justify-content: center;
+    min-width: 0;
   }
   .nav-icon {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
   }
   .nav-text {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
+    white-space: nowrap;
   }
   .nav-badge {
     position: absolute;
-    top: 5px;
-    right: 20%;
+    top: 2px;
+    right: 12%;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    line-height: 17px;
+    text-align: center;
+    background: #ef4444;
+    color: #ffffff;
+    border-radius: 9999px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    z-index: 10;
+    border: 1.5px solid rgba(15, 23, 42, 0.95);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -1751,6 +1770,25 @@ body {
   width: 100%;
   overflow-x: auto;          /* 가로 스크롤 허용 */
   -webkit-overflow-scrolling: touch; /* iOS 부드러운 스크롤 */
+  padding-bottom: 0.5rem;    /* 스크롤바와 테이블 사이 여백 */
+  scrollbar-width: thin;     /* Firefox 스크롤바 굵기 */
+  scrollbar-color: #3b82f6 rgba(255, 255, 255, 0.05); /* Firefox 스크롤바 색상 */
+}
+
+/* Chrome, Safari, Edge 등 WebKit 브라우저용 가로 스크롤바(언더바) 디자인 */
+.table-responsive::-webkit-scrollbar {
+  height: 8px; /* 가로 스크롤바 두께 */
+}
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #3b82f6; /* 눈에 잘 띄는 파란색 스크롤바 핸들 */
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #60a5fa;
 }
 
 /* 이력 관리 테이블 기본 스타일 */
@@ -1758,8 +1796,8 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
-  /* 테이블이 컨테이너보다 넓어질 경우 최소 너비 보장 */
-  min-width: 520px;
+  /* 모바일에서도 모든 컬럼(시간, 작업, 대상, 작업자, 상세)이 잘리지 않고 가로 스크롤되도록 최소 너비 보장 */
+  min-width: 680px;
 }
 
 .data-table thead tr {
