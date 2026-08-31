@@ -658,8 +658,14 @@
                 <span style="color:var(--text-secondary);">~</span>
                 <input type="date" id="audit-end-date" class="form-input" style="width:140px; padding:0.4rem;" onchange="loadAuditLog()" title="종료일" />
                 
-                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('audit-start-date').value=''; document.getElementById('audit-end-date').value=''; loadAuditLog();">초기화</button>
+                <button class="btn btn-secondary btn-sm" onclick="resetAuditFilters()">초기화</button>
                 <button class="btn btn-primary btn-sm" onclick="loadAuditLog()" style="margin-left:auto;">🔄 새로고침</button>
+              </div>
+
+              <!-- 클릭으로 적용된 활성 필터 표시 영역 -->
+              <div id="audit-active-filters" style="display:none; margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(255,255,255,0.03); border:1px dashed var(--border-color); border-radius:8px; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                <span style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">🔍 적용된 필터:</span>
+                <div id="audit-filter-tags" style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;"></div>
               </div>
             </div>
             

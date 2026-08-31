@@ -2628,6 +2628,128 @@ async function renderTimeline(visitorId, containerEl) {
   }
 }
 
+// ── 전체 이력 관리 인터랙티브 필터 상태 관리 ──
+let auditFilterState = {
+  action: null,
+  visitorId: null,
+  visitorName: null,
+  actor: null,
+  remarks: null
+};
+
+// 특정 컬럼 필터 설정 함수
+function setAuditFilter(type, value, displayLabel = '') {
+  if (auditFilterState[type] === value) return; // 이미 동일한 필터면 유지
+  auditFilterState[type] = value;
+  if (type === 'visitorId') {
+    auditFilterState.visitorName = displayLabel || value;
+  }
+  renderAuditFilterTags();
+  loadAuditLog();
+}
+
+// 특정 필터 제거 함수
+function removeAuditFilter(type) {
+  auditFilterState[type] = null;
+  if (type === 'visitorId') auditFilterState.visitorName = null;
+  renderAuditFilterTags();
+  loadAuditLog();
+}
+
+// 모든 필터 초기화 함수
+function resetAuditFilters() {
+  const startDate = document.getElementById('audit-start-date');
+  const endDate = document.getElementById('audit-end-date');
+  if (startDate) startDate.value = '';
+  if (endDate) endDate.value = '';
+
+  auditFilterState = {
+    action: null,
+    visitorId: null,
+    visitorName: null,
+    actor: null,
+    remarks: null
+  };
+
+  renderAuditFilterTags();
+  loadAuditLog();
+}
+
+// 적용된 필터 뱃지 렌더링
+function renderAuditFilterTags() {
+  const container = document.getElementById('audit-active-filters');
+  const tagsList = document.getElementById('audit-filter-tags');
+  if (!container || !tagsList) return;
+
+  tagsList.innerHTML = '';
+  let activeCount = 0;
+
+  const actionLabels = {
+    'CREATED': '등록',
+    'APPROVED': '승인',
+    'REJECTED': '반려',
+    'EXITED': '퇴실',
+    'DELETED': '삭제됨',
+    'HARD_DELETED': '영구삭제',
+    'RESTORED': '복구됨',
+    'UPDATED': '수정됨'
+  };
+
+  if (auditFilterState.action) {
+    activeCount++;
+    const label = actionLabels[auditFilterState.action] || auditFilterState.action;
+    tagsList.appendChild(createFilterTagElement('작업', label, () => removeAuditFilter('action')));
+  }
+
+  if (auditFilterState.visitorId) {
+    activeCount++;
+    tagsList.appendChild(createFilterTagElement('방문자', auditFilterState.visitorName || '지정 방문자', () => removeAuditFilter('visitorId')));
+  }
+
+  if (auditFilterState.actor) {
+    activeCount++;
+    tagsList.appendChild(createFilterTagElement('작업자', auditFilterState.actor, () => removeAuditFilter('actor')));
+  }
+
+  if (auditFilterState.remarks) {
+    activeCount++;
+    tagsList.appendChild(createFilterTagElement('상세', auditFilterState.remarks, () => removeAuditFilter('remarks')));
+  }
+
+  if (activeCount > 0) {
+    container.style.display = 'flex';
+    // 전체 해제 버튼
+    const clearAllBtn = document.createElement('button');
+    clearAllBtn.className = 'btn btn-ghost btn-sm';
+    clearAllBtn.style.cssText = 'font-size:0.75rem; padding:0.15rem 0.5rem; color:var(--danger);';
+    clearAllBtn.textContent = '필터 전체 해제 ✕';
+    clearAllBtn.onclick = resetAuditFilters;
+    tagsList.appendChild(clearAllBtn);
+  } else {
+    container.style.display = 'none';
+  }
+}
+
+// 필터 태그 DOM 요소 생성 헬퍼
+function createFilterTagElement(category, text, onRemove) {
+  const tag = document.createElement('span');
+  tag.style.cssText = 'display:inline-flex; align-items:center; gap:0.35rem; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#93c5fd; padding:0.2rem 0.5rem; border-radius:9999px; font-size:0.78rem; font-weight:500;';
+  
+  const label = document.createElement('span');
+  label.innerHTML = `<strong>${category}:</strong> ${escapeHtml(text)}`;
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.style.cssText = 'background:none; border:none; color:#f87171; cursor:pointer; font-weight:bold; font-size:0.85rem; padding:0; line-height:1; display:flex; align-items:center;';
+  removeBtn.innerHTML = '✕';
+  removeBtn.title = '이 필터 해제';
+  removeBtn.onclick = onRemove;
+
+  tag.appendChild(label);
+  tag.appendChild(removeBtn);
+  return tag;
+}
+
 // --- 전체 이력 관리 데이터 로드 함수 ---
 async function loadAuditLog() {
   const loading = document.getElementById('audit-loading');
@@ -2659,16 +2781,30 @@ async function loadAuditLog() {
       query = query.lte('created_at', endOfDay);
     }
 
+    // 클릭 필터 조건 적용
+    if (auditFilterState.action) {
+      query = query.eq('action', auditFilterState.action);
+    }
+    if (auditFilterState.visitorId) {
+      query = query.eq('visitor_id', auditFilterState.visitorId);
+    }
+    if (auditFilterState.actor) {
+      query = query.eq('actor_name', auditFilterState.actor);
+    }
+    if (auditFilterState.remarks) {
+      query = query.ilike('remarks', `%${auditFilterState.remarks}%`);
+    }
+
     const { data: logsData, error } = await query;
 
     if (error) throw error;
 
-    if (logsData.length === 0) {
+    if (!logsData || logsData.length === 0) {
       empty.style.display = 'flex';
     } else {
       document.getElementById('audit-table').parentElement.style.display = 'block';
       
-      // 방문자 기본 정보 매핑을 위해 visitor_id 추출 및 별도 조회 (Join 오류 방지)
+      // 방문자 기본 정보 매핑을 위해 visitor_id 추출 및 별도 조회
       const visitorIds = [...new Set(logsData.map(log => log.visitor_id))].filter(id => id);
       
       let visitorsMap = {};
@@ -2683,35 +2819,57 @@ async function loadAuditLog() {
         const date = new Date(log.created_at).toLocaleString('ko-KR');
         
         let actionBadge = '';
-        const badgeBaseStyle = 'color:#fff; border-radius:9999px; padding:0.2rem 0.6rem; font-size:0.75rem; font-weight:bold; display:inline-block; border:1px solid rgba(0,0,0,0.1);';
+        const badgeBaseStyle = 'color:#fff; border-radius:9999px; padding:0.2rem 0.6rem; font-size:0.75rem; font-weight:bold; display:inline-block; border:1px solid rgba(0,0,0,0.1); cursor:pointer; transition:transform 0.15s ease;';
         
-        if (log.action === 'CREATED') actionBadge = `<span class="tag" style="background:#4B5563; ${badgeBaseStyle}">등록</span>`;
-        else if (log.action === 'APPROVED') actionBadge = `<span class="tag" style="background:#047857; ${badgeBaseStyle}">승인</span>`;
-        else if (log.action === 'REJECTED') actionBadge = `<span class="tag" style="background:#B91C1C; ${badgeBaseStyle}">반려</span>`;
-        else if (log.action === 'EXITED') actionBadge = `<span class="tag" style="background:#4B5563; ${badgeBaseStyle}">🚪 퇴실</span>`;
-        else if (log.action === 'DELETED') actionBadge = `<span class="tag" style="background:#E14B4B; ${badgeBaseStyle}">삭제됨</span>`;
-        else if (log.action === 'HARD_DELETED') actionBadge = `<span class="tag" style="background:#7F1D1D; border:1.5px solid #FF2D2D !important; ${badgeBaseStyle}">🗑️ 영구삭제</span>`;
-        else if (log.action === 'RESTORED') actionBadge = `<span class="tag" style="background:#14A870; ${badgeBaseStyle}">복구됨</span>`;
-        else if (log.action === 'UPDATED') actionBadge = `<span class="tag" style="background:#6366F1; ${badgeBaseStyle}">수정됨</span>`;
-        else actionBadge = `<span class="tag" style="background:#9DA5AF; ${badgeBaseStyle}">${log.action}</span>`;
+        if (log.action === 'CREATED') actionBadge = `<span class="tag" style="background:#4B5563; ${badgeBaseStyle}" title="클릭하여 '${log.action}' 이력만 필터">등록</span>`;
+        else if (log.action === 'APPROVED') actionBadge = `<span class="tag" style="background:#047857; ${badgeBaseStyle}" title="클릭하여 '승인' 이력만 필터">승인</span>`;
+        else if (log.action === 'REJECTED') actionBadge = `<span class="tag" style="background:#B91C1C; ${badgeBaseStyle}" title="클릭하여 '반려' 이력만 필터">반려</span>`;
+        else if (log.action === 'EXITED') actionBadge = `<span class="tag" style="background:#4B5563; ${badgeBaseStyle}" title="클릭하여 '퇴실' 이력만 필터">🚪 퇴실</span>`;
+        else if (log.action === 'DELETED') actionBadge = `<span class="tag" style="background:#E14B4B; ${badgeBaseStyle}" title="클릭하여 '삭제됨' 이력만 필터">삭제됨</span>`;
+        else if (log.action === 'HARD_DELETED') actionBadge = `<span class="tag" style="background:#7F1D1D; border:1.5px solid #FF2D2D !important; ${badgeBaseStyle}" title="클릭하여 '영구삭제' 이력만 필터">🗑️ 영구삭제</span>`;
+        else if (log.action === 'RESTORED') actionBadge = `<span class="tag" style="background:#14A870; ${badgeBaseStyle}" title="클릭하여 '복구됨' 이력만 필터">복구됨</span>`;
+        else if (log.action === 'UPDATED') actionBadge = `<span class="tag" style="background:#6366F1; ${badgeBaseStyle}" title="클릭하여 '수정됨' 이력만 필터">수정됨</span>`;
+        else actionBadge = `<span class="tag" style="background:#9DA5AF; ${badgeBaseStyle}" title="클릭하여 '${log.action}' 필터">${log.action}</span>`;
 
-        let targetName = '알 수 없음';
+        let targetHtml = '알 수 없음';
+        let rawTargetName = '알 수 없음';
         const vInfo = visitorsMap[log.visitor_id];
         if (vInfo) {
-          targetName = `${vInfo.visitor_name || '이름 없음'} <span style="color:var(--text-muted); font-size:0.85rem;">(${vInfo.visitor_company || '소속 없음'})</span>`;
+          rawTargetName = vInfo.visitor_name || '이름 없음';
+          targetHtml = `${rawTargetName} <span style="color:var(--text-muted); font-size:0.85rem;">(${vInfo.visitor_company || '소속 없음'})</span>`;
         } else {
-           // 방문자가 영구 삭제된 경우
-           targetName = '<span style="color:var(--danger); font-size:0.85rem;">[영구 삭제된 방문자]</span>';
+          targetHtml = '<span style="color:var(--danger); font-size:0.85rem;">[영구 삭제된 방문자]</span>';
         }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td style="font-size:0.82rem; color:var(--text-secondary); white-space:nowrap;">${date}</td>
-          <td style="white-space:nowrap;">${actionBadge}</td>
-          <td style="font-weight:500; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis;">${targetName}</td>
-          <td style="white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis;">${log.actor_name}</td>
-          <td style="font-size:0.85rem; color:var(--text-secondary);">${log.remarks || ''}</td>
+          <td style="white-space:nowrap; cursor:pointer;" class="audit-clickable-cell" title="클릭하여 이 작업으로 필터">${actionBadge}</td>
+          <td style="font-weight:500; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; cursor:${log.visitor_id ? 'pointer' : 'default'};" class="${log.visitor_id ? 'audit-clickable-cell' : ''}" title="${log.visitor_id ? '클릭하여 이 방문자의 전체 이력 필터' : ''}">${targetHtml}</td>
+          <td style="white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; cursor:pointer;" class="audit-clickable-cell" title="클릭하여 '${escapeHtml(log.actor_name)}' 작업자 이력만 필터"><strong>${escapeHtml(log.actor_name)}</strong></td>
+          <td style="font-size:0.85rem; color:var(--text-secondary); cursor:pointer;" class="audit-clickable-cell" title="클릭하여 이 상세 내용으로 필터">${escapeHtml(log.remarks || '')}</td>
         `;
+
+        // 1. 작업(Action) 클릭 이벤트
+        const actionTd = tr.children[1];
+        actionTd.onclick = () => setAuditFilter('action', log.action);
+
+        // 2. 대상 방문자(Visitor) 클릭 이벤트
+        const visitorTd = tr.children[2];
+        if (log.visitor_id) {
+          visitorTd.onclick = () => setAuditFilter('visitorId', log.visitor_id, rawTargetName);
+        }
+
+        // 3. 작업자(Actor) 클릭 이벤트
+        const actorTd = tr.children[3];
+        actorTd.onclick = () => setAuditFilter('actor', log.actor_name);
+
+        // 4. 상세 내용(Remarks) 클릭 이벤트
+        const remarksTd = tr.children[4];
+        if (log.remarks) {
+          remarksTd.onclick = () => setAuditFilter('remarks', log.remarks);
+        }
+
         list.appendChild(tr);
       });
     }

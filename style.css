@@ -1785,6 +1785,20 @@ body {
   color: var(--text-primary);
 }
 
+/* 이력 관리 클릭 가능한 셀 호버 효과 */
+.audit-clickable-cell {
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.audit-clickable-cell:hover {
+  background: rgba(59,130,246,0.08);
+  color: #93c5fd !important;
+  text-decoration: underline;
+}
+.audit-clickable-cell .tag:hover {
+  transform: scale(1.06);
+}
+
 /* 상세 내용 컬럼만 예외적으로 줄 바꿈 허용 */
 .data-table td:last-child {
   white-space: normal;
