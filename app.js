@@ -149,11 +149,15 @@ async function updateAllBadgeCounts() {
       .in('approval_status', ['승인', '반려'])
       .is('deleted_at', null);
 
-    // 3. 휴지통 건수 (deleted_at IS NOT NULL)
+    // 3. 휴지통 건수 (7일 이내에 삭제된 문서만 카운트)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
     const pTrash = db
       .from('visitors')
       .select('*', { count: 'exact', head: true })
-      .not('deleted_at', 'is', null);
+      .not('deleted_at', 'is', null)
+      .gte('deleted_at', sevenDaysAgo.toISOString());
 
     const [resApproval, resArchive, resTrash] = await Promise.all([pApproval, pArchive, pTrash]);
 
@@ -2365,6 +2369,12 @@ async function loadTrash(filter = 'all') {
     const { data, error } = await query;
 
     if (error) throw error;
+
+    // 전체 조회 시 휴지통 뱃지 숫자 즉시 동기화
+    if (filter === 'all') {
+      const trashBadge = document.getElementById('trash-badge');
+      if (trashBadge) trashBadge.textContent = data.length.toString();
+    }
 
     if (data.length === 0) {
       empty.style.display = 'flex';
