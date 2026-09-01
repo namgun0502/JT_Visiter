@@ -236,11 +236,8 @@ function switchTab(tabId) {
     loadAuditLog();
   }
   if (tabId === 'ledger') {
-    // 이번 달 1일부터 오늘까지를 기본 날짜로 설정
+    // 시작일은 비워두어 전체 기간을 조회할 수 있도록 하고, 종료일은 오늘 날짜로 기본 설정
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    // YYYY-MM-DD 포맷
     const formatDate = (d) => {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -248,7 +245,7 @@ function switchTab(tabId) {
       return `${year}-${month}-${day}`;
     };
     
-    document.getElementById('ledger-start-date').value = formatDate(firstDay);
+    document.getElementById('ledger-start-date').value = '';
     document.getElementById('ledger-end-date').value = formatDate(today);
     
     loadLedger();
@@ -2210,22 +2207,26 @@ async function loadLedger() {
   const endDate = document.getElementById('ledger-end-date').value;
   const tbody = document.getElementById('ledger-tbody');
 
-  if (!startDate || !endDate) {
-    showToast('시작일과 종료일을 모두 선택해 주세요.', 'error');
-    return;
-  }
-
   tbody.innerHTML = '<tr><td colspan="9" style="padding:2rem;">데이터를 불러오는 중...</td></tr>';
 
   try {
-    const { data, error } = await db
+    let query = db
       .from('visitors')
       .select('*')
       // 승인 또는 반려 처리된 건만 가져옴 (결재 완료된 건)
       .in('approval_status', ['승인', '반려'])
-      .is('deleted_at', null)
-      .gte('visit_date', startDate)
-      .lte('visit_date', endDate)
+      .is('deleted_at', null);
+
+    // 시작일이 있으면 gte 적용, 비어있으면 전체 과거부터 조회
+    if (startDate) {
+      query = query.gte('visit_date', startDate);
+    }
+    // 종료일이 있으면 lte 적용
+    if (endDate) {
+      query = query.lte('visit_date', endDate);
+    }
+
+    const { data, error } = await query
       .order('visit_date', { ascending: true })
       .order('visit_time', { ascending: true });
 
@@ -2331,9 +2332,10 @@ function exportToCSV() {
   const link = document.createElement('a');
   const startDate = document.getElementById('ledger-start-date').value;
   const endDate = document.getElementById('ledger-end-date').value;
+  const periodLabel = startDate ? `${startDate}_${endDate}` : (endDate ? `전체_${endDate}` : '전체');
   
   link.setAttribute('href', url);
-  link.setAttribute('download', `방문자_출입_관리대장_${startDate}_${endDate}.csv`);
+  link.setAttribute('download', `방문자_출입_관리대장_${periodLabel}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
