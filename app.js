@@ -3364,7 +3364,7 @@ function openUnreturnedModal(visitors) {
 
   visitors.forEach(v => {
     const card = document.createElement('div');
-    card.style.cssText = 'background:var(--card-bg, #ffffff); border:1.5px solid var(--danger, #ef4444); border-radius:10px; padding:0.875rem 1rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; box-shadow: 0 2px 4px rgba(239,68,68,0.08);';
+    card.style.cssText = 'background:var(--color-bg-container, #0F172A); border:1.5px solid var(--seed-color-error, #ef4444); border-radius:12px; padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; box-shadow:0 4px 12px rgba(239,68,68,0.15); margin-bottom:0.75rem;';
 
     const name = escapeHtml(v.visitor_name || v.name || '이름 없음');
     const company = escapeHtml(v.visitor_company || v.company || '소속 없음');
@@ -3373,19 +3373,19 @@ function openUnreturnedModal(visitors) {
     const guideName = escapeHtml(v.guide_name || '미지정');
 
     card.innerHTML = `
-      <div style="flex:1; min-width:200px;">
-        <div style="font-weight:700; font-size:1rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+      <div style="flex:1; min-width:220px;">
+        <div style="font-weight:700; font-size:1.05rem; color:var(--color-text, #ffffff); display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
           <span>${name}</span>
-          <span style="font-size:0.8rem; font-weight:normal; color:var(--text-secondary);">(${company})</span>
-          <span class="tag" style="background:#EF4444; color:#fff; font-size:0.75rem; padding:0.15rem 0.5rem; border-radius:9999px;">미퇴실</span>
+          <span style="font-size:0.85rem; font-weight:normal; color:var(--color-text-secondary, #94a3b8);">(${company})</span>
+          <span class="tag" style="background:#EF4444; color:#ffffff; font-size:0.75rem; font-weight:bold; padding:0.2rem 0.6rem; border-radius:9999px; border:none; margin-left:auto;">미퇴실</span>
         </div>
-        <div style="font-size:0.825rem; color:var(--text-secondary); margin-top:0.25rem;">
-          📅 방문일: <strong>${visitDate} ${entryTime}</strong> | 👤 안내자: ${guideName}
+        <div style="font-size:0.85rem; color:var(--color-text-secondary, #94a3b8); margin-top:0.35rem; line-height:1.4;">
+          📅 방문일: <strong style="color:var(--color-text, #ffffff);">${visitDate} ${entryTime}</strong> &nbsp;|&nbsp; 👤 안내자: <strong style="color:var(--color-text, #ffffff);">${guideName}</strong>
         </div>
       </div>
-      <div style="display:flex; gap:0.5rem;">
-        <button class="btn btn-primary" style="padding:0.45rem 0.85rem; font-size:0.85rem;" onclick="closeUnreturnedModal(); showApprovalDetail('${v.id}', 'archive')">
-          🚪 퇴실 처리
+      <div style="display:flex; gap:0.5rem; flex-shrink:0;">
+        <button class="btn btn-primary" style="padding:0.5rem 1rem; font-size:0.875rem; font-weight:600; white-space:nowrap; border-radius:8px;" onclick="closeUnreturnedModal(); showApprovalDetail('${v.id}', 'archive')">
+          🚪 퇴실 기록
         </button>
       </div>
     `;
